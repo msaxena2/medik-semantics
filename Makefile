@@ -1,7 +1,8 @@
-BUILD_DIR     := .build
-TESTS_DIR     := t
+CURDIR        := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+BUILD_DIR     := $(CURDIR)/.build
+TESTS_DIR     := $(CURDIR)/t
 DEFN_DIR      := $(BUILD_DIR)/defn
-SRC_DIR       := .
+SRC_DIR       := $(CURDIR)
 BUILD_LOCAL   := $(abspath $(BUILD_DIR)/local)
 
 LIBRARY_PATH       := $(BUILD_LOCAL)/lib
@@ -78,9 +79,13 @@ ALL_K_FILES   := $(COMMON_FILES) $(EXTRA_K_FILES)
 # RPC Pipeline
 # ------------
 
-rpc_dir   := $(BUILD_DIR)/rpc
-rpc_files := $(patsubst %, $(rpc_dir)/%, $(ALL_K_FILES))
-rpc_kore  := $(rpc_dir)/$(MAIN_DEFN_FILE)-kompiled/definition.kore
+rpc_dir      := $(BUILD_DIR)/rpc
+rpc_files    := $(patsubst %, $(rpc_dir)/%, $(ALL_K_FILES))
+rpc_kore     := $(rpc_dir)/$(MAIN_DEFN_FILE)-kompiled/definition.kore
+rpc_kompiled := $(rpc_dir)/server
+
+export rpc_kore
+export rpc_dir
 
 $(rpc_dir)/%.md: $(SRC_DIR)/%.md
 	@mkdir -p $(rpc_dir)
@@ -94,5 +99,8 @@ $(rpc_kore): $(rpc_files)
 		$(KOMPILE_OPTS)
 
 $(rpc_kompiled): $(rpc_kore)
+	echo "$(K_RELEASE)"
 	@mkdir -p $(rpc_dir)/build
-	cd $(rpc_dir)/build && cmake $(CURDIR)/cmake/client -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} && $(MAKE)
+	cd $(rpc_dir)/build && cmake $(CURDIR)/cmake/client -DKOMPILED_DIR=$(rpc_dir)/medik-kompiled -DCMAKE_BUILD_TYPE=DEBUG && $(MAKE)
+
+build-rpc: $(rpc_kompiled)

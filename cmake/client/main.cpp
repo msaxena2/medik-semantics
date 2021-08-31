@@ -6,8 +6,8 @@
 #include <getopt.h>
 #define CPPHTTPLIB_THREAD_POOL_COUNT 1
 #include <httplib.h>
+#include "k.h"
 #include "runtime/alloc.h"
-#include "init.h"
 #include <gflags/gflags.h>
 
 void runKServer(httplib::Server *svr);
