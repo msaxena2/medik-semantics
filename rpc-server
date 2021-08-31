@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+from pathlib import Path
+from argparse import ArgumentParser
+import subprocess, socket, os, requests, json
+
+base_dir     = Path(__file__).parents[0]
+krelease_dir = base_dir     / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
+kbin_dir     = krelease_dir / 'bin'
+build_dir    = base_dir     / '.build'
+lib_dir      = build_dir    / 'local'  / 'lib'
+defn_dir     = build_dir    / 'defn'
+
+def set_env():
+    path_entires = [ kbin_dir
+                   , lib_dir
+                   , defn_dir     / 'rpc' / 'build'
+                   , krelease_dir / 'lib' / 'native' / 'linux'
+                   , krelease_dir / 'lib' / 'native' / 'linux64' ]
+
+
+    os.environ['PATH'] = os.pathsep.join( map( lambda path : str(path.resolve())
+                                             , path_entires)) \
+                        + os.pathsep + os.environ['PATH']
+    if args.rpc:
+        ld_entries = [ krelease_dir / 'lib' / 'native' / 'linux64'
+                     , lib_dir]
+        if not 'LD_LIBRARY_PATH' in os.environ:
+            os.environ['LD_LIBRARY_PATH'] =  os.pathsep.join( map( lambda path : str(path.resolve())
+                                                                , ld_entries))
+        else:
+            os.environ['LD_LIBRARY_PATH'] =  os.pathsep.join( map( lambda path : str(path.resolve())
+                                                                , ld_entries)) \
+                                           + os.environ['LD_LIBRARY_PATH']
+
+
+
+def get_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    return str(s.getsockname()[1])
+
+def krun(flags, file):
+  set_env()
+  flags = sum( map(lambda s : s.split(' '), flags)
+             , [])
+  out = subprocess.check_call( [ 'krun'
+                               , '-d', (defn_dir / 'llvm').resolve()
+                               , file]
+                             + flags)
+
+def rpc_send(port, file):
+    with open(file, 'r') as json_file:
+        json_in = json.loads(json_file.read())
+    response = requests.post('http://127.0.0.1:{}'.format(port), json=json_in)
+    print(json.dumps( json.loads(response.content)
+                    , indent=4))
+
+
+def rpc_server(port, flags):
+  set_env()
+  flags = sum( map(lambda s : s.split(' '), flags)
+             , [])
+  print('Starting rpc server at http://127.0.0.1:{}'.format(port))
+  subprocess.check_call( [ 'rpc-server'
+                         , '--port', port
+                         , '--host', '127.0.0.1']
+                       + flags)
+
+
+parser = ArgumentParser()
+parser.add_argument( 'file'
+                   , help='Use file as batch input'
+                   , nargs='?')
+
+parser.add_argument( '--rpc'
+                   , help='Start in RPC server mode'
+                   , action='store_true' )
+
+parser.add_argument( '--port'
+                   , help='Start server at specified port' )
+
+parser.add_argument( '--krun_flags'
+                   , help='Flags to pass to krun'
+                   , nargs=1
+                   , default=[])
+
+args = parser.parse_args()
+if args.rpc:
+    if args.port:
+        port = args.port
+    else:
+        port = get_port()
+
+    if args.file:
+        rpc_send(port, args.file)
+    else:
+        rpc_server(port, args.krun_flags)
+
+elif args.file:
+  krun(args.krun_flags, args.file)
