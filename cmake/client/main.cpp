@@ -6,6 +6,7 @@
 #include <getopt.h>
 #define CPPHTTPLIB_THREAD_POOL_COUNT 1
 #include <httplib.h>
+#include "runtime/alloc.h"
 #include "k.h"
 #include "runtime/alloc.h"
 #include <gflags/gflags.h>
@@ -76,7 +77,6 @@ void runKServer(httplib::Server *svr) {
   static blockheader injHeaderCommands = getBlockHeaderForSymbol(getTagForSymbolName("inj{SortCommands{}, SortKItem{}}"));
 
   initStaticObjects();
-  set_gc_interval(10000);
 
   int input[2], output[2];
   if (pipe(input)) {
