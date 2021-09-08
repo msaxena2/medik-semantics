@@ -1,0 +1,81 @@
+machine PediatricSepsisGuidelines {
+
+  vars weight, age, bpSys, bpDia, heartRate, pulseQuality,
+      temperature, skinColor, highRiskConditions;
+
+  events GetPatientWeightAndAge
+       , HighRiskConditionsResponse
+       , PatientWeightAndAgeResponse
+       , GetPatientVitals
+       , PatientVitalsResponse
+       , PatientVitalsRepsonse
+       , GetHighRiskConditions
+       , SepticShockDiagnosis
+       , NoShockDiagnosis
+       , StartOneHourBundle
+       , OneHourBundleFinished;
+
+  init state PatientWeightAndAge {
+    vars response;
+
+    entry {
+      send FrotendMachine, GetPatientWeightAndAge;
+    }
+
+    on PatientWeightAndAgeResponse do (response) {
+      weight = response.weight;
+      age    = response.age;
+      goto GetPatientVitals;
+    }
+  }
+
+  state GetPatientVitals {
+    var response;
+
+    entry {
+      send FrontendMachine, GetPatientVials;
+    }
+
+    on PatientVitalsResponse do (response) {
+      bpSys = response.bpSys;
+      bpDia = response.bpDia;
+      heartRate = response.heartRate;
+      pulseQuality = response.pulseQuality;
+      temperature = response.temperature;
+      skinColor = response.skinColor;
+      goto GetHighRiskConditions;
+    }
+  }
+
+  state GetHighRiskConditions {
+    var resp;
+
+    entry {
+      send FrotendMachine, GetHighRiskConditions;
+    }
+
+    on HighRiskConditionsResponse do (resp) {
+      highRiskConditions = resp.highRiskConditions;
+      goto SepsisShockEvaluation;
+    }
+  }
+
+  state SepsisShockEvaluation {
+    var sepsisShockScore;
+    var highRiskOfSepsis;
+    entry {
+      // Logic for Calculation of Sepsis Shock Score
+      if (...) {
+        // ...
+      }
+      if ((sepsisShockScore > 3) && || (sepsisShockScore == 2 && highRiskOfSepsis)) {
+        send TreatmentMachine, StartOneHourBundle;
+      }
+    }
+
+    on OneHourBundleFinished do {
+      // restart evaluation
+      goto GetPatientWeightAndAge;
+    }
+  }
+}
