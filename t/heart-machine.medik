@@ -1,0 +1,41 @@
+machine HeartMachine {
+  vars heartRate, pulseQuality, bpDia, bpSys;
+
+  events GetHeartRate
+       , GetBP
+       , GetECG
+       , SetTimer
+       , GetHeartRateResponse
+       , GetBPResponse
+       , GetECGResponse
+       , SetTimerResponse;
+
+
+  start state HeartLoop {
+    var response;
+    enter {
+      send HeartRateMonitor, GetHeartRate;
+      send BloodPressureMonitor, GetBP;
+      send ECGMonitor, GetECG, (duration = 100); // last 1 second
+      send TimerMachine, SetTimer, (duration = 100); // 1 second Timer
+    }
+
+    on GetHeartRateResponse do (response) {
+      heartRate = response.heartRate;
+    }
+
+    on GetBP do (response) {
+      bpDia = response.dia;
+      bpSys = response.sys;
+    }
+
+    on GetPulseQuality do (response) {
+      // logic to analyze ECG wave and set pulseQuality
+    }
+
+    on SetTimerResponse do {
+      // New measurements - redo loop
+      goto HeartLoop;
+    }
+  }
+}
