@@ -122,7 +122,6 @@ module MEDIK
        <store> (Pointer |-> V) ... </store>
     requires notBool (I in keys(Rho))
 
-
   rule <k> I:Id = V:Val => V ... </k>
        <machineEnv> (I |-> Loc) ... </machineEnv>
        <store> Store => Store[Loc <- V] </store>
