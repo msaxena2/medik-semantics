@@ -14,6 +14,10 @@ module MEDIK-SYNTAX
   syntax Exp ::= Id
                | Val
                | Exp "+" Exp          [strict]
+               | Exp "-" Exp          [strict]
+               | Exp "*" Exp          [strict]
+               | Exp "/" Exp          [strict]
+               | "(" Exp ")"          [bracket]
                > Exp "=" Exp          [strict(2)]
                | "print" "(" Exp ")"  [strict]
                | "var" Id
@@ -80,6 +84,7 @@ module MEDIK
 ```
 ### Expression and Statement
 
+#### Variable Assignment and Lookup
 ```k
   rule var I:Id = V:Val => var I; ~> I = V
 
@@ -97,7 +102,20 @@ module MEDIK
   rule <k> I:Id = V:Val => V ... </k>
        <env> (I |-> Loc) ... </env>
        <store> Store => Store[Loc <- V] </store>
+```
 
+#### Arithmetic Expressions
+```k
+  rule I1:Int + I2:Int => I1 +Int I2
+  rule I1:Int - I2:Int => I1 -Int I2
+  rule I1:Int * I2:Int => I1 *Int I2
+  rule I1:Int / I2:Int => I1 /Int I2
+    requires I2 =/=K 0
+  rule _:Int / 0 => undef
+```
+
+#### Other Operations
+```k
   rule <k> print(V:Val) => V ... </k>
        <output> ... (.List => ListItem(V)) </output>
     requires V =/=K undef
