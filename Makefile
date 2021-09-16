@@ -1,26 +1,8 @@
 BUILD_DIR     := .build
-TESTS_DIR     := t
-DEFN_DIR      := $(BUILD_DIR)/defn
-SRC_DIR       := .
 BUILD_LOCAL   := $(abspath $(BUILD_DIR)/local)
-
-LIBRARY_PATH       := $(BUILD_LOCAL)/lib
-C_INCLUDE_PATH     += :$(BUILD_LOCAL)/include
-CPLUS_INCLUDE_PATH += :$(BUILD_LOCAL)/include
-PKG_CONFIG_PATH    := $(LIBRARY_PATH)/pkgconfig
-
-export LIBRARY_PATH
-export C_INCLUDE_PATH
-export CPLUS_INCLUDE_PATH
-export PKG_CONFIG_PATH
-
-INSTALL_PREFIX := /usr/local
-INSTALL_DIR    ?= $(DESTDIR)$(INSTALL_PREFIX)/bin
 
 DEPS_DIR         := ext
 K_SUBMODULE      := $(abspath $(DEPS_DIR)/k)
-PLUGIN_SUBMODULE := $(abspath $(DEPS_DIR)/blockchain-k-plugin)
-export PLUGIN_SUBMODULE
 
 K_RELEASE ?= $(K_SUBMODULE)/k-distribution/target/release/k
 K_BIN     := $(K_RELEASE)/bin
@@ -31,36 +13,23 @@ PATH := $(K_BIN):$(PATH)
 export PATH
 
 .PHONY: all clean distclean \
-        deps k-deps plugin-deps \
-        build build-llvm build-rpc \
-        defn rpc-defn llvm-defn  \
-        test-all test-rpc \
+        deps k-deps \
+        build \
+        test \
 
 all: build
-
-clean:
-	rm -rf $(DEFN_BASE_DIR)
-
-distclean:
-	rm -rf $(BUILD_DIR)
-	git clean -dffx -- tests/
 
 # K Dependencies
 # --------------
 
 deps: repo-deps
-repo-deps: k-deps plugin-deps
+repo-deps: k-deps
 k-deps: $(K_SUBMODULE)/make.timestamp
-plugin-deps: $(PLUGIN_SUBMODULE)/make.timestamp
 
 $(K_SUBMODULE)/make.timestamp:
 	git submodule update --init --recursive -- $(K_SUBMODULE)
 	cd $(K_SUBMODULE) && mvn package -DskipTests -U -Dproject.build.type=FastBuild -Dhaskell.backend.skip
 	touch $(K_SUBMODULE)/make.timestamp
-
-$(PLUGIN_SUBMODULE)/make.timestamp:
-	git submodule update --init --recursive -- $(PLUGIN_SUBMODULE)
-	touch $(PLUGIN_SUBMODULE)/make.timestamp
 
 # Building
 # --------
@@ -70,29 +39,46 @@ SYNTAX_MODULE  := MEDIK-SYNTAX
 export MAIN_DEFN_FILE := medik
 
 
-COMMON_FILES  := core.md jsonRpc.md kRpc.md commons.md
+COMMON_FILES  :=
 EXTRA_K_FILES += $(MAIN_DEFN_FILE).md
 ALL_K_FILES   := $(COMMON_FILES) $(EXTRA_K_FILES)
 
+build: build-llvm
 
-# RPC Pipeline
-# ------------
+# LLVM-Build Pipeline
+# -------------------
 
-rpc_dir   := $(BUILD_DIR)/rpc
-rpc_files := $(patsubst %, $(rpc_dir)/%, $(ALL_K_FILES))
-rpc_kore  := $(rpc_dir)/$(MAIN_DEFN_FILE)-kompiled/definition.kore
+LLVM_KOMPILED_DIR := $(BUILD_DIR)/$(MAIN_DEFN_FILE)-kompiled
+build-llvm: $(LLVM_KOMPILED_DIR)/make.timestamp
 
-$(rpc_dir)/%.md: $(SRC_DIR)/%.md
-	@mkdir -p $(rpc_dir)
-	@cp $< $@
+$(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
+	mkdir -p $(BUILD_DIR)
+	kompile -d $(LLVM_KOMPILED_DIR) \
+	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
+	@touch $@
 
-$(rpc_kore): $(rpc_files)
-	kompile --debug --main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) --backend llvm \
-	        $(rpc_dir)/$(MAIN_DEFN_FILE).md \
-	        --directory $(rpc_dir) -I $(rpc_dir) \
-	        --hook-namespaces "JSON K-RPC" --no-llvm-kompile \
-		$(KOMPILE_OPTS)
+# Tests
+# -----
 
-$(rpc_kompiled): $(rpc_kore)
-	@mkdir -p $(rpc_dir)/build
-	cd $(rpc_dir)/build && cmake $(CURDIR)/cmake/client -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} && $(MAKE)
+TEST_LLVM_FILES := $(wildcard tests/*.medik)
+tests-llvm: $(patsubst tests/%.medik, tests/%.medik.run, $(TEST_LLVM_FILES))
+
+COMPARE := git --no-pager diff --no-index --ignore-all-space -R
+PROCESS_OUT := "./tests/processOut"
+
+GREEN := \033[0;32m
+RESET := \033[0m
+tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/make.timestamp
+	@echo "Running $< ..."
+	@krun --output none -d $(LLVM_KOMPILED_DIR) $< > $@
+	@$(COMPARE) $@ $(word 2, $^)
+	@echo "${GREEN} OK ${RESET}"
+
+
+# Cleaning
+# --------
+
+clean: clean-llvm
+
+clean-llvm:
+	rm -rf $(LLVM_KOMPILED_DIR)
