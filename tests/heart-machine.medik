@@ -1,0 +1,23 @@
+machine HeartMachine {
+  vars heartRate, bpSys, bpDia, pulseQuality;
+
+  init state HeartRateLoop (frequency) {
+    var response = extern getHeartRateParameters;
+    heartRate = response.heartRate;
+    bpSys = response.bpSys;
+    bpDia = response.bpDia;
+    pulseQuality = response.pulseQuality;
+    broadcast HeartRateUpdateEvent;
+    extern sleep(frequency);
+  }
+}
+
+init machine HeartSystem {
+  init state HeartSystem {
+    heartMachine = new HeartMachine(1000); // 1 Hz
+
+    on HeartRateUpdateEvent {
+      print(heartMachine.heartRate);
+    }
+  }
+}
