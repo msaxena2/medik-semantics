@@ -9,17 +9,21 @@ module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
 
   syntax Ids ::= List{Id, ","}
+  syntax Exps ::= List{Exp, ","}
+
   syntax Val ::= Int | Bool | "undef"
 
   syntax Exp ::= Id
                | Val
-               | Exp "+" Exp          [strict]
-               | Exp "-" Exp          [strict]
-               | Exp "*" Exp          [strict]
-               | Exp "/" Exp          [strict]
-               | "(" Exp ")"          [bracket]
-               > Exp "=" Exp          [strict(2)]
-               | "print" "(" Exp ")"  [strict]
+               | Exp "+" Exp           [strict]
+               | Exp "-" Exp           [strict]
+               | Exp "*" Exp           [strict]
+               | Exp "/" Exp           [strict]
+               | "(" Exp ")"           [bracket]
+               | Id "(" Exps ")"       [strict(2)]
+               | "new" Id "(" Exps ")" [strict(2)]
+               > Exp "=" Exp           [strict(2)]
+               | "print" "(" Exp ")"   [strict]
                | "var" Id
                | "vars" Ids
 
@@ -46,20 +50,29 @@ module MEDIK
 
   syntax KResult ::= Val
 
-  syntax KItem ::= "createMainMachine"
+  syntax KItem ::= "createMachineTemplates" "(" Stmt ")"
 
-  configuration <machines>
-                  <machine multiplicity="*" type="Map">
-                    <machineName> . </machineName>
-                    <k> createMainMachine ~> { $PGM:Stmt } </k>
-                    <activeState> undef </activeState>
+  syntax Id ::= "$Main"
+
+  configuration <instances>
+                  <instance mulitplicity="*" type="Map">
+                    <id> 0 </id>
+                    <k> createMachineTemplates($PGM:Stmt) </k>
                     <env> .Map </env>
-                    <stack> .Map </stack>
+                    <class> $Main </class>
+                    <activeState> undef </activeState>
+                  </instance>
+                </instances>
+                <machines>
+                  <machine multiplicity="*" type="Map">
+                    <machineName> $Main </machineName>
+                    <code> . </code>
+                    <isInitMachine> false </isInitMachine>
                     <states>
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
                         <entryBlock> . </entryBlock>
-                        <isInit> false </isInit>
+                        <isInitState> false </isInitState>
                         <exitBlock> . </exitBlock>
                       </state>
                     </states>
@@ -72,34 +85,38 @@ module MEDIK
 ### Macros
 
 ```k
-  rule S:Stmt Ss:Stmt => S ~> Ss                                [structural]
   rule { S:Stmt } => S                                          [structural]
   rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2,Is;   [structural]
 ```
 
-### Machine creation
+### Machine Template Creation
 
 ```k
-  syntax Id ::= "Main"
-  rule <k> createMainMachine => . ... </k>
-       <machineName> _ => Main </machineName>
+  rule createMachineTemplates(S Ss) => createMachineTemplates(S) ~> createMachineTemplates(Ss)
+  rule <k> createMachineTemplates(machine Name Code) => . ... </k>
+       <machines>
+         ( .Bag =>  <machine>
+                      <machineName> Name </machineName>
+                      <code> Code </code> ...
+                    </machine> ) ...
+       </machines>
 
+  rule <k> createMachineTemplates(init machine Name Code) => . ... </k>
+       <machines>
+         ( .Bag =>  <machine>
+                      <machineName> Name </machineName>
+                      <isInitMachine> true </isInitMachine>
+                      <code> Code </code> ...
+                    </machine> ) ...
+       </machines>
 
-  rule <machine>
-        <k> (machine Name Code => .) ... </k>
-        <env> Rho </env> ...
-       </machine>
-       ( .Bag =>  <machine>
-                    <machineName> Name </machineName>
-                    <k> Code </k>
-                    <env> Rho </env> ...
-                  </machine> )
 ```
 ### Expression and Statement
 
 #### Variable Assignment and Lookup
 ```k
   rule var I:Id = V:Val => var I; ~> I = V
+  rule S:Stmt Ss:Stmt => S ~> Ss
 
   rule <k> var Id => Loc ... </k>
        <env> Rho => Rho[Id <- Loc] </env>
@@ -141,5 +158,6 @@ module MEDIK
 
   rule <k> print(undef) => undef ... </k>
        <output> ... (.List => ListItem("undef")) </output>
+
 endmodule
 ```
