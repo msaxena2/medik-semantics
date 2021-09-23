@@ -27,12 +27,19 @@ module MEDIK-SYNTAX
                | "var" Id
                | "vars" Ids
 
-  syntax Stmt ::= Exp ";"            [strict]
+  syntax Stmt ::= Exp ";"                      [strict]
+                | Block
                 | "entry" Block
-                | "state" Id Block
-                > "init" Stmt
-                | "machine" Id Block
-                > Stmt Stmt          [right]
+                | "entry" "(" Ids ")" Block
+                | "on" Id "do" Block
+                | "on" Id "(" Ids ")" "do" Block
+                | StateDecl
+                > "machine" Id Block
+                | "init" "machine" Id Block
+                > Stmt Stmt                    [right]
+
+  syntax StateDecl ::= "state" Id Block
+                     | "init" "state" Id Block
 
   syntax Block ::= "{" "}"
                  | "{" Stmt "}"
@@ -51,7 +58,6 @@ module MEDIK
   syntax KResult ::= Val
 
   syntax KItem ::= "createMachineTemplates" "(" Stmt ")"
-
   syntax Id ::= "$Main"
 
   configuration <instances>
@@ -72,8 +78,16 @@ module MEDIK
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
                         <entryBlock> . </entryBlock>
+                        <args> . </args>
                         <isInitState> false </isInitState>
                         <exitBlock> . </exitBlock>
+                        <eventHandlers>
+                          <eventHandler multiplicity="*" type="Set">
+                            <eventId> . </eventId>
+                            <eventArgs> . </eventArgs>
+                            <handlerCode> . </handlerCode>
+                          </eventHandler>
+                        </eventHandlers>
                       </state>
                     </states>
                   </machine>
@@ -87,13 +101,19 @@ module MEDIK
 ```k
   rule { S:Stmt } => S                                          [structural]
   rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2,Is;   [structural]
+  rule entry B:Block => entry (.Ids) B                          [macro]
+  rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
 ```
 
 ### Machine Template Creation
 
 ```k
+  syntax KItem ::= "createTransitionSystem" "(" machineName: Id "," code: Stmt ")"
+                 | "createEventHandlers"    "(" machineName: Id "," stateName: Id "," code: Stmt ")"
+                 | "createEntryBlock"       "(" machineName: Id "," stateName: Id "," code: Stmt ")"
+
   rule createMachineTemplates(S Ss) => createMachineTemplates(S) ~> createMachineTemplates(Ss)
-  rule <k> createMachineTemplates(machine Name Code) => . ... </k>
+  rule <k> createMachineTemplates(machine Name Code) => createTransitionSystem(Name, Code) ... </k>
        <machines>
          ( .Bag =>  <machine>
                       <machineName> Name </machineName>
@@ -101,7 +121,7 @@ module MEDIK
                     </machine> ) ...
        </machines>
 
-  rule <k> createMachineTemplates(init machine Name Code) => . ... </k>
+  rule <k> createMachineTemplates(init machine Name Code) => createTransitionSystem(Name, Code) ... </k>
        <machines>
          ( .Bag =>  <machine>
                       <machineName> Name </machineName>
@@ -110,6 +130,73 @@ module MEDIK
                     </machine> ) ...
        </machines>
 
+
+  rule createTransitionSystem(MName, S Ss)
+    => createTransitionSystem(MName, S) ~> createTransitionSystem(MName, Ss)
+
+  rule createTransitionSystem(MName, { B }) => createTransitionSystem(MName, B)
+
+  rule <k> createTransitionSystem(MName, state SName:Id Code:Block)
+        =>   createEntryBlock(MName, SName, Code)
+          ~> createEventHandlers(MName, SName, Code) ...
+       </k>
+       <machine>
+        <machineName> MName </machineName>
+        <states> ( .Bag => <state>
+                            <stateName> SName </stateName> ...
+                           </state> ) ...
+        </states> ...
+       </machine>
+
+  rule <k> createTransitionSystem(MName, init state SName:Id Code:Block)
+        =>   createEntryBlock(MName, SName, Code)
+          ~> createEventHandlers(MName, SName, Code) ...
+       </k>
+       <machine>
+        <machineName> MName </machineName>
+        <states> ( .Bag => <state>
+                            <stateName> SName </stateName>
+                            <isInitState> true </isInitState> ...
+                           </state> ) ...
+        </states> ...
+       </machine>
+
+  rule createTransitionSystem(_, _) => . [owise]
+
+  rule <k> createEntryBlock(MName, SName, entry ( Args:Ids ) Code:Block) => . ... </k>
+       <machine>
+        <machineName> MName </machineName>
+        <state>
+          <stateName> SName </stateName>
+          <entryBlock> _ => Code </entryBlock>
+          <args> _ => Args </args> ...
+        </state> ...
+       </machine>
+
+  rule createEntryBlock(_, _, { B } => B)
+  rule createEntryBlock(_, _, _) => .     [owise]
+
+
+  rule <k> createEventHandlers(MName, SName, on EName ( Args:Ids ) do Code:Block) => . ... </k>
+       <machine>
+        <machineName> MName </machineName>
+        <state>
+          <stateName> SName </stateName>
+          <eventHandlers>
+            (.Bag => <eventHandler>
+                      <eventId> EName </eventId>
+                      <eventArgs> Args </eventArgs>
+                      <handlerCode> Code </handlerCode> ...
+                     </eventHandler> ) ...
+          </eventHandlers> ...
+       </state> ...
+      </machine>
+
+  rule createEventHandlers(_, _, { B } => B)
+  rule createEventHandlers(MName, SName, S Ss)
+    => createEventHandlers(MName, SName, S) ~> createEventHandlers(MName, SName, Ss)
+
+  rule createEventHandlers(_, _, _) => . [owise]
 ```
 ### Expression and Statement
 
