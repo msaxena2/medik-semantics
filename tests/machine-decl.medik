@@ -1,0 +1,16 @@
+machine A {
+  var a;
+  init state Foo {
+    entry  {
+      a = 1;
+      print(a);
+    }
+  }
+}
+
+init machine B {
+  init state Bar {
+    new A(); // should result in 1 printed
+  }
+}
+
