@@ -1,2 +1,8 @@
-var a = 1 + 2;
-print(a);
+init machine Arith {
+  init state entryPoint {
+    entry {
+      var a = 1 + 2;
+      print(a);
+    }
+  }
+}
