@@ -1,2 +1,8 @@
-var a = 2 / (1 - 1);
-print(a);
+init machine Arith2 {
+  init state entryPoint {
+    entry {
+      var a = 2 / (1 - 1);
+      print(a);
+    }
+  }
+}
