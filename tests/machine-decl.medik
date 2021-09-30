@@ -9,8 +9,12 @@ machine A {
 }
 
 init machine B {
+  vars a, b;
   init state Bar {
-    new A(); // should result in 1 printed
+    vars c, d;
+    entry {
+      new A(); // should result in 1 printed
+    }
   }
 }
 
