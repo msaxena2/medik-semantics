@@ -304,20 +304,28 @@ module MEDIK
 #### Instance creation via new
 
 ```k
-  syntax KItem ::= "enterState" "(" stateName: Id "," entryArgs: Vals ")"
-                 | "instance" "(" instanceId: Int ")"
+  syntax KItem ::= "execEntryCode" "(" stateName: Id "," entryArgs: Vals ")"
                  | "recordEnv"
                  | "restoreEnv"
+                 | "execEventHandlers"
+                 | "wait"
                  | "dequeueEvent"
                  | "execEntryBlock" "(" Vals ")"
+                 | "returnControl" "(" machineId: Int ")"
+
+  syntax Val ::= "instance" "(" instanceId: Int ")"
 
   rule  <instance>
-          <k> new MName ( Args ) => Loc ... </k>
+          <id> SourceId </id>
+          <k> new MName ( Args ) => wait ... </k>
           ...
         </instance>
         ( .Bag => <instance>
                     <id> Loc </id>
-                    <k> MachineDecls ~> enterState(InitState, Args) </k>
+                    <k> MachineDecls
+                     ~> execEntryCode(InitState, Args)
+                     ~> returnControl(SourceId)
+                     ~> execEventHandlers </k>
                     <class> MName </class> ...
                    </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
@@ -331,12 +339,19 @@ module MEDIK
         </state> ...
        </machine>
 
-  rule <k> enterState(SName, Vals)
+  rule <instance>
+        <id> SourceId </id>
+        <k> wait => instance(TargetId) ... </k> ...
+       </instance>
+       <instance>
+        <id> TargetId </id>
+        <k> returnControl(SourceId) => . ... </k>  ...
+       </instance>
+
+  rule <k> execEntryCode(SName, Vals)
         =>   recordEnv
           ~> StateDecls
-          ~> execEntryBlock(Vals)
-          ~> dequeueEvent
-          ~> restoreEnv ...
+          ~> execEntryBlock(Vals) ...
       </k>
       <env> _ </env>
       <class> Class </class>
@@ -349,6 +364,8 @@ module MEDIK
         </state>
         ...
       </machine>
+
+  rule execEventHandlers => dequeueEvent ~> restoreEnv
 
   rule <k> recordEnv => . ... </k>
        <env> Rho </env>
