@@ -1,0 +1,26 @@
+machine Indirect {
+  var x;
+  init state Foo {
+    entry(b) {
+      x = b;
+    }
+  }
+}
+
+machine Direct {
+  var x;
+  init state Foo {
+    entry(a) {
+      x = new Indirect(a + 1);
+    }
+  }
+}
+
+init machine Driver {
+  init state Create {
+    entry {
+      var obj = new Direct(2);
+      print(obj.x.x); // should print 3
+    }
+  }
+}
