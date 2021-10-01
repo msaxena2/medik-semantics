@@ -9,13 +9,17 @@ module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
 
   syntax Ids ::= List{Id, ","}
-  syntax Exps ::= List{Exp, ","} | Vals
+  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps)]
+  syntax UndefExp ::= "undef"
 
-  syntax Val ::= Int | Bool | "undef"
-  syntax Vals ::= List{Val, ","}
+  syntax Val
+  syntax Vals ::= List{Val, ","}  [klabel(exps)]
 
   syntax Exp ::= Id
-               | Val
+               | Int
+               | Bool
+               | String
+               | UndefExp
                | Exp "+" Exp           [strict]
                | Exp "-" Exp           [strict]
                | Exp "*" Exp           [strict]
@@ -58,9 +62,14 @@ module MEDIK
   imports MEDIK-SYNTAX
   imports DOMAINS
 
+  syntax Val ::= Int | Bool | String | UndefExp
+  syntax Exp ::= Val
+  syntax Exps ::= Vals
+
   syntax KResult ::= Val | Vals
 
   syntax KItem ::= "createMachineTemplates" "(" Stmt ")"
+
   syntax Id ::= "$Main"
 
   configuration <instances>
@@ -385,8 +394,8 @@ module MEDIK
         </state> ...
       </machine>
 
-  rule <k> assign(I:Id , Is | V:Val, Vs) => assign(Is | Vs) ... </k>
-       <env> .Map => (I |-> V) ... </env>
+  rule assign(I:Id , Is | V:Val, Vs)
+    => var I = V; ~> assign(Is | Vs)
 
   rule assign( .Ids | .Vals ) => .
 
