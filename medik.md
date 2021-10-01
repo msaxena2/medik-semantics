@@ -24,6 +24,7 @@ module MEDIK-SYNTAX
                | Exp "-" Exp           [strict]
                | Exp "*" Exp           [strict]
                | Exp "/" Exp           [strict]
+               | Exp "." Exp           [strict(1), left]
                | "(" Exp ")"           [bracket]
                | Id "(" Exps ")"       [strict(2)]
                | "new" Id "(" Exps ")" [strict(2)]
@@ -298,6 +299,14 @@ module MEDIK
        <env> (I |-> Loc) ... </env>
        <store> Store => Store[Loc <- V] </store>
 
+  rule <instance>
+        <k> instance(Id:Int) . Field => Value ... </k> ...
+       </instance>
+       <instance>
+        <id> Id </id>
+        <env> (Field |-> Pointer) ... </env> ...
+       </instance>
+       <store> (Pointer |-> Value) ... </store>
 ```
 
 #### Arithmetic Expressions
@@ -322,13 +331,12 @@ module MEDIK
                  | "execEntryBlock" "(" Vals ")"
                  | "returnControl" "(" machineId: Int ")"
 
-  syntax Val ::= "instance" "(" instanceId: Int ")"
+  syntax InstExp ::= "instance" "(" instanceId: Int ")"
+  syntax Exp ::= InstExp
+  syntax Val ::= InstExp
 
-  rule  <instance>
-          <id> SourceId </id>
-          <k> new MName ( Args ) => wait ... </k>
-          ...
-        </instance>
+  rule  <id> SourceId </id>
+        <k> new MName ( Args ) => wait ... </k>
         ( .Bag => <instance>
                     <id> Loc </id>
                     <k> MachineDecls
