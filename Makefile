@@ -69,10 +69,10 @@ PROCESS_OUT := "./tests/processOut"
 GREEN := \033[0;32m
 RESET := \033[0m
 tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/make.timestamp
-	@printf "$< ..."
+	@printf '%-30s %s' "$< " "... "
 	@krun --output none -d $(LLVM_KOMPILED_DIR) $< > $@
 	@$(COMPARE) $@ $(word 2, $^)
-	@printf "${GREEN} OK ${RESET}\n"
+	@printf "${GREEN}PASSED ${RESET}\n"
 
 
 # Cleaning
