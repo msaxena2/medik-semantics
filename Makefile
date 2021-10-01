@@ -72,7 +72,7 @@ tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/mak
 	@printf '%-30s %s' "$< " "... "
 	@krun --output none -d $(LLVM_KOMPILED_DIR) $< > $@
 	@$(COMPARE) $@ $(word 2, $^)
-	@printf "${GREEN}PASSED ${RESET}\n"
+	@printf "${GREEN}OK ${RESET}\n"
 
 
 # Cleaning
