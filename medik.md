@@ -322,14 +322,14 @@ module MEDIK
 #### Instance creation via new
 
 ```k
-  syntax KItem ::= "execEntryCode" "(" stateName: Id "," entryArgs: Vals ")"
+  syntax KItem ::= "execEntryCode"  "(" stateName: Id "," entryArgs: Vals ")"
+                 | "returnControl"  "(" machineId: Int ")"
+                 | "execEntryBlock" "(" Vals ")"
                  | "recordEnv"
                  | "restoreEnv"
                  | "execEventHandlers"
                  | "wait"
                  | "dequeueEvent"
-                 | "execEntryBlock" "(" Vals ")"
-                 | "returnControl" "(" machineId: Int ")"
 
   syntax InstExp ::= "instance" "(" instanceId: Int ")"
   syntax Exp ::= InstExp
