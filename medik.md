@@ -15,11 +15,14 @@ module MEDIK-SYNTAX
   syntax Val
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
 
+  syntax ThisExp ::= "this"
+
   syntax Exp ::= Id
                | Int
                | Bool
                | String
                | UndefExp
+               | ThisExp
                | Exp "+" Exp           [strict]
                | Exp "-" Exp           [strict]
                | Exp "*" Exp           [strict]
@@ -78,6 +81,7 @@ module MEDIK
                     <id> 0 </id>
                     <k> createMachineTemplates($PGM:Stmt) ~> createInitInstance </k>
                     <env> .Map </env>
+                    <genv> .Map </genv>
                     <class> $Main </class>
                     <stack> .List </stack>
                     <activeState> . </activeState>
@@ -278,9 +282,15 @@ module MEDIK
   rule var I:Id = V:Val => var I; ~> I = V
   rule S:Stmt Ss:Stmt => S ~> Ss
 
-  rule <k> var Id => Loc ... </k>
-       <env> Rho => Rho[Id <- Loc] </env>
-       <store> .Map => (Loc |-> undef) ... </store>
+  syntax Exp ::= "var" Exp "." Id [strict(1)]
+
+  rule <k> this => instance(Id) ... </k>
+       <id> Id </id>
+
+  rule <k> var instance(Id) . Field => Loc ... </k>
+       <id> Id </id>
+       <genv> GRho => GRho[Field <- Loc] </genv>
+       <store> (.Map => (Loc |-> undef)) ... </store>
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
 
   rule <k> var Id => Loc ... </k>
@@ -294,17 +304,38 @@ module MEDIK
        <env> (I |-> Loc) ... </env>
        <store> (Loc |-> V) ... </store>
 
+  rule <k> I:Id => this . I ... </k>
+       <env> Rho </env>
+       <genv> GRho </genv>
+    requires (notBool(I in keys(Rho))) andBool (I in keys(GRho))
 
   rule <k> I:Id = V:Val => V ... </k>
        <env> (I |-> Loc) ... </env>
        <store> Store => Store[Loc <- V] </store>
+
+  context HOLE . _:Id = _:Val
+
+  rule <k> ( I:Id => this . I ) = _:Val ... </k>
+       <env> Rho </env>
+       <genv> GRho </genv>
+    requires (notBool(I in keys(Rho))) andBool (I in keys(GRho))
+
+  rule <k> ( instance(Id) . Field:Id = V:Val ) => V ... </k>
+       <id> Id </id>
+       <genv> (Field |-> Pointer) ... </genv>
+       <store> (Pointer |-> (_ => V)) ... </store>
+
+  rule <k> instance(Id) . Field => Value ... </k>
+       <id> Id </id>
+       <genv> (Field |-> Pointer) ... </genv>
+       <store> (Pointer |-> Value) ... </store>
 
   rule <instance>
         <k> instance(Id:Int) . Field => Value ... </k> ...
        </instance>
        <instance>
         <id> Id </id>
-        <env> (Field |-> Pointer) ... </env> ...
+        <genv> (Field |-> Pointer) ... </genv> ...
        </instance>
        <store> (Pointer |-> Value) ... </store>
 ```
@@ -324,6 +355,7 @@ module MEDIK
 ```k
   syntax KItem ::= "execEntryCode"  "(" stateName: Id "," entryArgs: Vals ")"
                  | "returnControl"  "(" machineId: Int ")"
+                 | "asGlobalDecls"  "(" decls: Stmt ")"
                  | "execEntryBlock" "(" Vals ")"
                  | "recordEnv"
                  | "restoreEnv"
@@ -339,7 +371,7 @@ module MEDIK
         <k> new MName ( Args ) => wait ... </k>
         ( .Bag => <instance>
                     <id> Loc </id>
-                    <k> MachineDecls
+                    <k> asGlobalDecls(MachineDecls)
                      ~> execEntryCode(InitState, Args)
                      ~> returnControl(SourceId)
                      ~> execEventHandlers </k>
@@ -355,6 +387,30 @@ module MEDIK
           <isInitState> true </isInitState> ...
         </state> ...
        </machine>
+
+  rule  <id> SourceId </id>
+        <k> new MName ( Args ) => wait ... </k>
+        ( .Bag => <instance>
+                    <id> Loc </id>
+                    <k> execEntryCode(InitState, Args)
+                     ~> returnControl(SourceId)
+                     ~> execEventHandlers </k>
+                    <class> MName </class> ...
+                   </instance> )
+       <nextLoc> Loc => Loc +Int 1 </nextLoc>
+       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
+       <machine>
+        <machineName> MName </machineName>
+        <declarationCode> . </declarationCode>
+        <state>
+          <stateName> InitState </stateName>
+          <isInitState> true </isInitState> ...
+        </state> ...
+       </machine>
+
+  rule asGlobalDecls(S Ss) => asGlobalDecls(S) ~> asGlobalDecls(Ss)
+  rule asGlobalDecls(var Id;) => var this . Id;
+
 
   rule <instance>
         <id> SourceId </id>
