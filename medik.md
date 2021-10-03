@@ -79,6 +79,7 @@ module MEDIK
                     <k> createMachineTemplates($PGM:Stmt) ~> createInitInstance </k>
                     <env> .Map </env>
                     <class> $Main </class>
+                    <stack> .List </stack>
                     <activeState> . </activeState>
                   </instance>
                 </instances>
@@ -106,7 +107,6 @@ module MEDIK
                     </states>
                   </machine>
                 </machines>
-                <stack> .List </stack>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
                 <output stream="stdout"> .List </output>
