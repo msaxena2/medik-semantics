@@ -1,0 +1,18 @@
+machine Dereference {
+  var x;
+  init state Foo {
+      entry(a) {
+      x = a;
+    }
+  }
+}
+
+init machine Driver {
+  var obj;
+  init state Create {
+    entry {
+      obj = new Dereference(2);
+      print(this.obj.x); // should print 2
+    }
+  }
+}
