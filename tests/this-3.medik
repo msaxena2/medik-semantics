@@ -1,0 +1,10 @@
+init machine ThisTest {
+  var a;
+  init state Foo {
+    entry {
+      var a = 1;
+      this.a = a + 1;
+      print(this.a); // should print 2
+    }
+  }
+}
