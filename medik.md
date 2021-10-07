@@ -86,6 +86,7 @@ module MEDIK
                     <genv> .Map </genv>
                     <class> $Main </class>
                     <stack> .List </stack>
+                    <inBuffer> .List </inBuffer>
                     <activeState> . </activeState>
                   </instance>
                 </instances>
@@ -125,6 +126,7 @@ module MEDIK
   rule vars I::Id , .Ids ; => var I;                            [macro]
   rule entry B:Block => entry (.Ids) B                          [macro]
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
+  rule send Id , Event => send Id, Event, ( .Vals )             [macro]
 ```
 
 ### Machine Template Creation
@@ -471,15 +473,44 @@ module MEDIK
 ```
 #### Event Handling
 
+##### Sending Events
 ```k
-  rule <k> dequeueEvent => . ... </k>
+  syntax Val ::= "done"
+  syntax KItem ::= "eventArgsPair" "(" eventId: Id "|" args: Vals ")"
+
+  rule <instance>
+        <k> send instance(Id) , EventName , ( Args ) =>  done ... </k>
+        ...
+       </instance>
+       <instance>
+        <id> Id </id>
+        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer> ...
+       </instance>
+
+  rule <k> send instance(Id) , EventName , ( Args ) =>  done ... </k>
+       <id> Id </id>
+       <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
+```
+
+##### Dequeueing Events
+```k
+  rule <k> dequeueEvent =>
+              recordEnv
+           ~> assign(EventArgs | Vals )
+           ~> HandlerCode
+           ~> restoreEnv ... </k>
        <class> MName </class>
        <activeState> State </activeState>
+       <inBuffer> (ListItem(eventArgsPair(EventId | Vals)) => .List) ... </inBuffer>
        <machine>
         <machineName> MName </machineName>
         <state>
           <stateName> State </stateName>
-          <eventHandlers> .Bag </eventHandlers> ...
+          <eventHandler>
+            <eventId> EventId </eventId>
+            <eventArgs> EventArgs </eventArgs>
+            <handlerCode> HandlerCode </handlerCode> ...
+          </eventHandler> ...
         </state> ...
       </machine>
 
