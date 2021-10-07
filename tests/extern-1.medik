@@ -1,0 +1,9 @@
+init machine ExternTest {
+  var a;
+  init state Start {
+    entry {
+      a = extern echo("hello");
+      print(a); // hello
+    }
+  }
+}
