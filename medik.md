@@ -462,6 +462,18 @@ module MEDIK
         </state> ...
       </machine>
 
+  rule <k> execEntryBlock(.Vals) => . ... </k>
+       <class> MName </class>
+       <activeState> ActiveState </activeState>
+       <machine>
+        <machineName> MName </machineName>
+        <state>
+          <stateName> ActiveState </stateName>
+          <entryBlock> . </entryBlock>
+          <args> . </args> ...
+        </state> ...
+      </machine>
+
   rule assign(I:Id , Is | V:Val, Vs)
     => var I = V; ~> assign(Is | Vs)
 
