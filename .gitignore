@@ -1,3 +1,4 @@
 /.kompile*
 /.build
 /tests/*.run
+__pycache__
