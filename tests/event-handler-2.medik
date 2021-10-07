@@ -1,0 +1,18 @@
+machine EventHandler {
+  var a;
+  init state Handle {
+    on TestEvent(a) do {
+      this.a = a + 1;
+      print(this.a);
+    }
+  }
+}
+
+init machine TestDrive {
+  init state Emit {
+    entry {
+      var handlerMachine = new EventHandler();
+      send handlerMachine, TestEvent, (2); // should print 3
+    }
+  }
+}
