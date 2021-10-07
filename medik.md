@@ -23,16 +23,18 @@ module MEDIK-SYNTAX
                | String
                | UndefExp
                | ThisExp
-               | Exp "+" Exp           [strict]
-               | Exp "-" Exp           [strict]
-               | Exp "*" Exp           [strict]
-               | Exp "/" Exp           [strict]
-               | Exp "." Exp           [strict(1), left]
-               | "(" Exp ")"           [bracket]
-               | Id "(" Exps ")"       [strict(2)]
-               | "new" Id "(" Exps ")" [strict(2)]
-               > Exp "=" Exp           [strict(2)]
-               | "print" "(" Exp ")"   [strict]
+               | Exp "+" Exp                        [strict]
+               | Exp "-" Exp                        [strict]
+               | Exp "*" Exp                        [strict]
+               | Exp "/" Exp                        [strict]
+               | Exp "." Exp                        [strict(1), left]
+               | "(" Exp ")"                        [bracket]
+               | Id "(" Exps ")"                    [strict(2)]
+               | "new" Id "(" Exps ")"              [strict(2)]
+               | "send" Exp "," Id                  [strict(1)]
+               | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               > Exp "=" Exp                        [strict(2)]
+               | "print" "(" Exp ")"                [strict]
                | DeclExp
 
   syntax DeclExp ::= "var" Id
