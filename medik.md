@@ -5,6 +5,8 @@ Syntax
 ------
 
 ```k
+requires "json.md"
+
 module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
 
@@ -36,6 +38,7 @@ module MEDIK-SYNTAX
                > Exp "=" Exp                        [strict(2)]
                | "print" "(" Exp ")"                [strict]
                | DeclExp
+               | "extern" Id "(" Exps ")"
 
   syntax DeclExp ::= "var" Id
                    | "vars" Ids
@@ -67,6 +70,7 @@ Semantics
 module MEDIK
   imports MEDIK-SYNTAX
   imports DOMAINS
+  imports JSON
 
   syntax Val ::= Int | Bool | String | UndefExp
   syntax Exp ::= Val
@@ -535,6 +539,52 @@ module MEDIK
 
   rule <k> print(undef) => undef ... </k>
        <output> ... (.List => ListItem("undef")) </output>
+```
+
+#### IPC via extern
+
+```k
+  syntax KItem ::= "doWriteAndCall" "(" String ")"
+                 | "processCallResult"
+
+  syntax JSON  ::= "Exp2JSON"   "(" Exp ")"  [function]
+  syntax JSONs ::= "Exps2JSONs" "(" Vals ")" [function]
+                 | "Obj2JSONs"  "(" Map ")"  [function]
+
+  rule Exp2JSON(Name:Id) => Id2String(Name)
+  rule Exp2JSON(Name:Id (Args:Vals))
+    => { "name": Id2String(Name)
+       , "args": [ Exps2JSONs(Args) ] }
+
+  rule Exp2JSON(S:String) => S
+  rule Exp2JSON(I:Int)    => I
+  rule Exp2JSON(undef)    => "undef"
+
+  rule [[ Exp2JSON(instance(Id)) => { Obj2JSONs(GEnv) } ]]
+       <instance>
+        <id> Id </id>
+        <genv> GEnv </genv> ...
+       </instance>
+
+  rule [[ Obj2JSONs((Id |-> Pointer) GEnv)
+    =>    Id2String(Id) : Exp2JSON(Value) , Obj2JSONs(GEnv) ]]
+       <store> (Pointer |-> Value) ... </store>
+
+  rule Obj2JSONs( .Map ) => .JSONs
+
+  rule Exps2JSONs(E, Es) => Exp2JSON(E) , Exps2JSONs(Es)
+  rule Exps2JSONs(.Vals) => .JSONs
+
+  context extern _:Id ( HOLE:Exps )
+  rule extern Name:Id ( Args:Vals )
+    =>   #mkstemp("externXXX")
+      ~> doWriteAndCall(JSON2String(Exp2JSON(Name(Args))))
+
+  rule #tempFile(FName, FD) ~> doWriteAndCall(S)
+    =>   #write(FD, S)
+      ~> #close(FD)
+      ~> #system("python3 middleware.py " +String FName)
+      ~> processCallResult
 
 endmodule
 ```
