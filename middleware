@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+from argparse import ArgumentParser
+import subprocess, os, sys, requests, json
+
+
+base_dir     = Path(__file__).parents[0]
+krelease_dir = base_dir     / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
+kbin_dir     = krelease_dir / 'bin'
+
+class ImproperInvocationError(Exception):
+    pass
+
+
+def set_env():
+    path_entires = [ kbin_dir ]
+    os.environ['PATH'] = str(kbin_dir.resolve()) \
+                            + os.pathsep + os.environ['PATH']
+
+def handle_input(in_json):
+    print(in_json)
+
+def main():
+    if len(sys.argv) != 2:
+        raise ImproperInvocationError('Incorrect number of args in CLI Invocation')
+
+    with open(sys.argv[1], 'r') as in_file:
+        in_json = json.loads(in_file.read())
+
+    handle_input(in_json)
+
+
+if __name__ == "__main__":
+    main()
+
