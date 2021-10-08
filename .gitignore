@@ -1,4 +1,5 @@
 /.kompile*
 /.build
 /tests/*.run
+/extern*
 __pycache__

@@ -71,6 +71,7 @@ module MEDIK
   imports MEDIK-SYNTAX
   imports DOMAINS
   imports JSON
+  imports K-REFLECTION
 
   syntax Val ::= Int | Bool | String | UndefExp
   syntax Exp ::= Val
@@ -495,7 +496,7 @@ module MEDIK
   syntax KItem ::= "eventArgsPair" "(" eventId: Id "|" args: Vals ")"
 
   rule <instance>
-        <k> send instance(Id) , EventName , ( Args ) =>  done ... </k>
+        <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
         ...
        </instance>
        <instance>
@@ -503,7 +504,7 @@ module MEDIK
         <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer> ...
        </instance>
 
-  rule <k> send instance(Id) , EventName , ( Args ) =>  done ... </k>
+  rule <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
        <id> Id </id>
        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
 ```
@@ -551,6 +552,9 @@ module MEDIK
   syntax JSONs ::= "Exps2JSONs" "(" Vals ")" [function]
                  | "Obj2JSONs"  "(" Map ")"  [function]
 
+  syntax Exp ::= "JSON2Obj"     "(" JSON ")"
+               | "constructObj" "(" JSON ")"
+
   rule Exp2JSON(Name:Id) => Id2String(Name)
   rule Exp2JSON(Name:Id (Args:Vals))
     => { "name": Id2String(Name)
@@ -575,6 +579,11 @@ module MEDIK
   rule Exps2JSONs(E, Es) => Exp2JSON(E) , Exps2JSONs(Es)
   rule Exps2JSONs(.Vals) => .JSONs
 
+
+  rule JSON2Obj({ "result" : S:String })              => S
+  rule JSON2Obj({ "result" : I:Int })                 => I
+  rule JSON2Obj({ "result" : ({ _:JSONs }) #as Obj }) => constructObj(Obj)
+
   context extern _:Id ( HOLE:Exps )
   rule extern Name:Id ( Args:Vals )
     =>   #mkstemp("externXXX")
@@ -583,8 +592,11 @@ module MEDIK
   rule #tempFile(FName, FD) ~> doWriteAndCall(S)
     =>   #write(FD, S)
       ~> #close(FD)
-      ~> #system("python3 middleware.py " +String FName)
+      ~> #system("./middleware " +String FName)
       ~> processCallResult
+
+  rule #systemResult(0, StdOut, _) ~> processCallResult
+    => JSON2Obj(#parseKORE(StdOut))
 
 endmodule
 ```
