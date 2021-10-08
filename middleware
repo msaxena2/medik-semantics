@@ -2,14 +2,18 @@
 
 from pathlib import Path
 from argparse import ArgumentParser
-import subprocess, os, sys, requests, json
+import subprocess, os, sys, requests, json, tempfile
 
 
 base_dir     = Path(__file__).parents[0]
+kompiled_dir = base_dir / '.build' / 'medik-kompiled'
 krelease_dir = base_dir     / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
 kbin_dir     = krelease_dir / 'bin'
 
 class ImproperInvocationError(Exception):
+    pass
+
+class MethodNotPresentError(Exception):
     pass
 
 
@@ -18,8 +22,39 @@ def set_env():
     os.environ['PATH'] = str(kbin_dir.resolve()) \
                             + os.pathsep + os.environ['PATH']
 
+def success_json(payload):
+    return { 'result': payload }
+
+# Function in middleware acessible to medik programs
+def echo(arg):
+    return success_json(arg)
+
+# Dispatcher for middleware methods
 def handle_input(in_json):
-    print(in_json)
+    match in_json['name']:
+        case 'echo':
+            pretty_out = echo(*in_json['args'])
+        case _:
+            raise MethodNotPresentError('Specified method not found')
+
+    fd, fp = tempfile.mkstemp()
+    try:
+        with os.fdopen(fd, 'w') as tp:
+            tp.write(json.dumps(pretty_out, separators=(',', ':')))
+            tp.flush()
+            kast_out = subprocess.run(['kast' \
+                                      , '-d' \
+                                      , str(kompiled_dir.resolve()) \
+                                      , '-m', 'JSON' \
+                                      , '-s', 'JSON' \
+                                      , '-o', 'KORE' \
+                                      , fp], stdout=subprocess.PIPE)
+            print(kast_out.stdout.decode('UTF-8'))
+    except subprocess.CalledProcessError as err:
+        print(err)
+        exit(1)
+    finally:
+        os.remove(fp)
 
 def main():
     if len(sys.argv) != 2:
