@@ -552,8 +552,12 @@ module MEDIK
   syntax JSONs ::= "Exps2JSONs" "(" Vals ")" [function]
                  | "Obj2JSONs"  "(" Map ")"  [function]
 
-  syntax Exp ::= "JSON2Obj"     "(" JSON ")"
-               | "constructObj" "(" JSON ")"
+  syntax ExpOrJSON ::= Val | JSON
+
+  syntax Exp ::= "JSON2Obj"     "(" ExpOrJSON ")"
+               | "constructObj" "(" ExpOrJSON ")"
+               | "result2Obj"   "(" JSON ")"
+               | "JSONs2Obj"    "(" JSONs ")"
 
   rule Exp2JSON(Name:Id) => Id2String(Name)
   rule Exp2JSON(Name:Id (Args:Vals))
@@ -580,9 +584,36 @@ module MEDIK
   rule Exps2JSONs(.Vals) => .JSONs
 
 
-  rule JSON2Obj({ "result" : S:String })              => S
-  rule JSON2Obj({ "result" : I:Int })                 => I
-  rule JSON2Obj({ "result" : ({ _:JSONs }) #as Obj }) => constructObj(Obj)
+  rule result2Obj({ "result" : S:String })                => S
+  rule result2Obj({ "result" : I:Int })                   => I
+  rule result2Obj({ "result" : (({ _:JSONs }) #as Obj )}) => constructObj(Obj)
+
+  rule JSON2Obj(Field : I:Int)
+    => var this.String2Id(Field); this.String2Id(Field) = I;
+
+  rule JSON2Obj(Field : S:String)
+    => var this.String2Id(Field); this.String2Id(Field) = S;
+
+  rule JSON2Obj(Field : B:Bool)
+    => var this.String2Id(Field); this.String2Id(Field) = B;
+
+  rule JSON2Obj(Field : (({ _:JSONs }) #as Obj ))
+    => var this.String2Id(Field); this.String2Id(Field) = constructObj(Obj);
+
+  rule JSONs2Obj(J:JSON, Js:JSONs) => JSON2Obj(J) ~> JSONs2Obj(Js)
+  rule JSONs2Obj(.JSONs)           => .
+
+  syntax Id ::= "$Dynamic"
+
+  rule <id> SourceId  </id>
+       <k> constructObj( { Pairs:JSONs } ) => wait ... </k>
+       ( .Bag =>  <instance>
+                    <k> JSONs2Obj(Pairs) ~> returnControl(SourceId) </k>
+                    <id> Loc </id>
+                    <class> $Dynamic </class> ...
+                  </instance> )
+       <nextLoc> Loc:Int => Loc +Int 1 </nextLoc>
+       <store> (.Map => (Loc |-> instance(Loc))) ... </store>
 
   context extern _:Id ( HOLE:Exps )
   rule extern Name:Id ( Args:Vals )
@@ -596,7 +627,7 @@ module MEDIK
       ~> processCallResult
 
   rule #systemResult(0, StdOut, _) ~> processCallResult
-    => JSON2Obj(#parseKORE(StdOut))
+    => result2Obj(#parseKORE(StdOut))
 
 endmodule
 ```
