@@ -1,0 +1,16 @@
+machine Simple {
+  var a;
+  init state Start {
+    entry (a) {
+      this.a = a;
+    }
+  }
+}
+init machine ExternTest {
+  init state Start {
+    entry {
+      var retval = extern echo(new Simple(new Simple(1))); // echo an object
+      print(retval.a.a); // 1
+    }
+  }
+}
