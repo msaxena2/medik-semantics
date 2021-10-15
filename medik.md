@@ -127,7 +127,7 @@ module MEDIK
 
 ```k
   rule { S:Stmt } => S                                          [structural]
-  rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2, Is;  [macro]
+  rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2, Is;  [macro-rec]
   rule vars I::Id , .Ids ; => var I;                            [macro]
   rule entry B:Block => entry (.Ids) B                          [macro]
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
