@@ -617,7 +617,7 @@ module MEDIK
 
   context extern _:Id ( HOLE:Exps )
   rule extern Name:Id ( Args:Vals )
-    =>   #mkstemp("externXXX")
+    =>   #mkstemp("externXXXXXX")
       ~> doWriteAndCall(JSON2String(Exp2JSON(Name(Args))))
 
   rule #tempFile(FName, FD) ~> doWriteAndCall(S)
