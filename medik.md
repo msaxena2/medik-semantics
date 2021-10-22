@@ -31,6 +31,7 @@ module MEDIK-SYNTAX
                | Exp "/" Exp                        [strict]
                | Exp "." Exp                        [strict(1), left]
                | "(" Exp ")"                        [bracket]
+               | "sleep" "(" Exp ")"                [strict(1)]
                | Id "(" Exps ")"                    [strict(2)]
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
@@ -121,6 +122,8 @@ module MEDIK
                 </machines>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
+                <timeoutEvents> .Set </timeoutEvents>
+                <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
 ```
 ### Macros
@@ -628,6 +631,32 @@ module MEDIK
 
   rule #systemResult(0, StdOut, _) ~> processCallResult
     => result2Obj(#parseKORE(StdOut))
+```
+
+#### Timer Hooks
+
+A simple hook to make the process wait
+
+```k
+  syntax Int ::= "#sleep" "(" duration: Int ")" [function, hook(TIMER.sleep)]
+
+  syntax Set ::= "#getTimeout"                  [function, hook(TIMER.getTimeout)]
+
+  syntax KItem ::= "#storeSleepTimer"
+                 | "#sleepWait" "(" timerId: Int ")"
+
+  rule <k> sleep(Duration:Int) => #sleep(Duration) ~> #storeSleepTimer ...</k>
+       <pendingTimers> PT => PT +Int 1 </pendingTimers>
+
+  rule I:Int ~> #storeSleepTimer => #sleepWait(I)
+
+  rule <k> #sleepWait(Tid) => Tid ... </k>
+       <timeoutEvents> (SetItem(Tid) => .Set) ... </timeoutEvents>
+       <pendingTimers> PT => PT -Int 1 </pendingTimers>
+
+  rule <timeoutEvents> .Set => #getTimeout </timeoutEvents>
+       <pendingTimers> PT </pendingTimers>
+    requires PT >Int 0  [prec(300)]
 
 endmodule
 ```

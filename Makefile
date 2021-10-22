@@ -1,5 +1,6 @@
 BUILD_DIR     := .build
 BUILD_LOCAL   := $(abspath $(BUILD_DIR)/local)
+LOCAL_LIB     := $(BUILD_LOCAL)/lib
 
 DEPS_DIR         := ext
 K_SUBMODULE      := $(abspath $(DEPS_DIR)/k)
@@ -51,9 +52,18 @@ build: build-llvm
 LLVM_KOMPILED_DIR := $(BUILD_DIR)/$(MAIN_DEFN_FILE)-kompiled
 build-llvm: $(LLVM_KOMPILED_DIR)/make.timestamp
 
-$(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
+KOMPILE_OPTS := --hook-namespaces TIMER -w all -Wno unused-symbol
+CPP_FILES := hooks/timer.cpp
+
+LLVM_KOMPILE_OPTS := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
+                     $(abspath $(CPP_FILES))                     \
+                     -std=c++14 -levent -Wall -g
+
+
+$(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 	mkdir -p $(BUILD_DIR)
-	kompile -d $(LLVM_KOMPILED_DIR) \
+	kompile -d $(LLVM_KOMPILED_DIR)				  \
+	$(KOMPILE_OPTS) $(addprefix -ccopt , $(LLVM_KOMPILE_OPTS)) \
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
@@ -78,7 +88,6 @@ tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/mak
 # Cleaning
 # --------
 
-clean: clean-llvm
+clean:
+	rm -rf .build
 
-clean-llvm:
-	rm -rf $(LLVM_KOMPILED_DIR)
