@@ -1,0 +1,18 @@
+machine WhileMachine {
+  init state Start {
+    entry {
+      var i = 0;
+      while(i < 5) {
+        print("Hello World\n");
+        i = i + 1;
+      }
+    }
+  }
+}
+init machine Driver {
+  init state Start {
+    entry {
+      new WhileMachine();
+    }
+  }
+}

@@ -57,6 +57,7 @@ module MEDIK-SYNTAX
                 | Block
                 > "if" "(" Exp ")" Block              [strict(1)]
                 | "if" "(" Exp ")" Block "else" Block [strict(1)]
+                | "while" "(" Exp ")" Block
                 | "entry" Block
                 | "entry" "(" Ids ")" Block
                 | "on" Id "do" Block
@@ -147,6 +148,8 @@ module MEDIK
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
   rule send Id , Event => send Id, Event, ( .Vals )             [macro]
   rule goto State:Id => goto State ( .Vals )                    [macro]
+  rule while (Cond) Block
+   => if (Cond) { Block while (Cond) Block }                    [structural]
 ```
 
 ### Machine Template Creation
