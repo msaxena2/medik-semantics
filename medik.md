@@ -494,6 +494,14 @@ module MEDIK
        <env> _ => Rho </env>
        <stack> (ListItem(Rho) => .List ) ... </stack>
 ```
+##### Semantics of goto
+
+```k
+  rule goto Target:Id ( Args:Vals )
+    =>    recordEnv
+       ~> execEntryCode( Target , Args )
+       ~> execEventHandlers
+```
 #### Event Handling
 
 ##### Sending Events
