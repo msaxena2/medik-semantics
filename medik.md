@@ -30,6 +30,13 @@ module MEDIK-SYNTAX
                | Exp "*" Exp                        [strict]
                | Exp "/" Exp                        [strict]
                | Exp "." Exp                        [strict(1), left]
+               | Exp ">" Exp                        [strict]
+               | Exp "<" Exp                        [strict]
+               | Exp ">=" Exp                       [strict]
+               | Exp "<=" Exp                       [strict]
+               | "!" Exp                            [strict]
+               | Exp "&&" Exp                       [strict(1)]
+               | Exp "||" Exp                       [strict]
                | "(" Exp ")"                        [bracket]
                | "sleep" "(" Exp ")"                [strict(1)]
                | Id "(" Exps ")"                    [strict(2)]
@@ -46,8 +53,10 @@ module MEDIK-SYNTAX
   syntax DeclExp ::= "var" Id
                    | "vars" Ids
 
-  syntax Stmt ::= Exp ";"                      [strict]
+  syntax Stmt ::= Exp ";"                              [strict]
                 | Block
+                > "if" "(" Exp ")" Block              [strict(1)]
+                | "if" "(" Exp ")" Block "else" Block [strict(1)]
                 | "entry" Block
                 | "entry" "(" Ids ")" Block
                 | "on" Id "do" Block
@@ -55,7 +64,7 @@ module MEDIK-SYNTAX
                 | StateDecl
                 > "machine" Id Block
                 | "init" "machine" Id Block
-                > Stmt Stmt                    [right]
+                > Stmt Stmt                            [right]
 
   syntax StateDecl ::= "state" Id Block
                      | "init" "state" Id Block
@@ -357,12 +366,30 @@ module MEDIK
 
 #### Arithmetic Expressions
 ```k
-  rule I1:Int + I2:Int => I1 +Int I2
-  rule I1:Int - I2:Int => I1 -Int I2
-  rule I1:Int * I2:Int => I1 *Int I2
-  rule I1:Int / I2:Int => I1 /Int I2
+  rule I1 + I2 => I1 +Int I2
+  rule I1 - I2 => I1 -Int I2
+  rule I1 * I2 => I1 *Int I2
+  rule I1 / I2 => I1 /Int I2
     requires I2 =/=K 0
-  rule _:Int / 0 => undef
+  rule _ / 0 => undef
+```
+
+#### Boolean Expressions
+
+```k
+  rule I1 < I2 => I1 <Int I2
+  rule I1 > I2 => I1 >Int I2
+
+  rule I1 <= I2 => I1 <=Int I2
+  rule I1 >= I2 => I1 >=Int I2
+
+  rule !true  => false
+  rule !false => true
+
+  rule true  && B => B
+  rule false && _ => false
+  rule true  || _ => true
+  rule false || B => B
 ```
 
 #### Instance creation via new
@@ -554,6 +581,16 @@ module MEDIK
 
   rule <k> print(undef) => undef ... </k>
        <output> ... (.List => ListItem("undef")) </output>
+```
+
+#### If/While
+
+```k
+  rule if (true) Block => Block
+  rule if (false) _ => .
+
+  rule if (true) Block else _  => Block
+  rule if (false) _ else Block => Block
 ```
 
 #### IPC via extern

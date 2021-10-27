@@ -1,0 +1,22 @@
+machine IfMachine {
+  var flag;
+  init state Start {
+    entry (arg) {
+      this.flag = arg > 0;
+      if (flag) {
+        print("constructed with positive\n");
+      } else {
+        print("constructed with negative\n");
+      }
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      new IfMachine(0); // negative
+      new IfMachine(1); // positive
+    }
+  }
+}
