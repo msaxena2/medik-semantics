@@ -36,6 +36,8 @@ module MEDIK-SYNTAX
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
                | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               | "goto" Id
+               | "goto" Id "(" Exps ")"             [strict(2)]
                > Exp "=" Exp                        [strict(2)]
                | "print" "(" Exp ")"                [strict]
                | DeclExp
@@ -135,6 +137,7 @@ module MEDIK
   rule entry B:Block => entry (.Ids) B                          [macro]
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
   rule send Id , Event => send Id, Event, ( .Vals )             [macro]
+  rule goto State:Id => goto State ( .Vals )                    [macro]
 ```
 
 ### Machine Template Creation
