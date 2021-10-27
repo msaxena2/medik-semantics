@@ -6,7 +6,7 @@ import subprocess, os, sys, requests, json, tempfile
 
 
 base_dir     = Path(__file__).parents[0]
-kompiled_dir = base_dir / '.build' / 'medik-kompiled'
+kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
 krelease_dir = base_dir     / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
 kbin_dir     = krelease_dir / 'bin'
 
