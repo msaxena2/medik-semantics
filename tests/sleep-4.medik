@@ -22,11 +22,13 @@ machine SleepMachine {
 init machine Driver {
   init state Start {
     entry {
-      var a = new SleepMachine("A", 5);
-      var b = new SleepMachine("B", 3);
+      var a = new SleepMachine("A", 10);
+      var b = new SleepMachine("B", 5);
       var c = new SleepMachine("C", 1);
       send a, Start;
+      sleep(1);
       send b, Start;
+      sleep(1);
       send c, Start;
     }
   }
