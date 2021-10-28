@@ -1,0 +1,31 @@
+machine A {
+  var count;
+  init state Start {
+    entry {
+      count = 0;
+    }
+    on Start do {
+      goto PostStart;
+    }
+  }
+  state PostStart {
+    entry {
+      var i = 0;
+      while (i < 5) {
+        print("[A]: Pre Sleep\n");
+        sleep(1);
+        print("[A]: Post Sleep\n");
+        i = i + 1;
+      }
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      var a = new A();
+      send a, Start;
+    }
+  }
+}
