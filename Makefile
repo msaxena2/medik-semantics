@@ -57,7 +57,7 @@ CPP_FILES := hooks/timer.cpp
 
 LLVM_KOMPILE_OPTS := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
                      $(abspath $(CPP_FILES))                     \
-                     -std=c++14 -levent -Wall -g
+		     -std=c++14 -levent -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
 
 
 $(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
