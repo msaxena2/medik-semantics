@@ -73,6 +73,8 @@ extern "C" {
             inj->data = move_int(result);
             tid_set = tid_set.insert((SortKItem) inj);
           }
+          // clear vector as all events handled
+          timeout_events.clear();
         }
         return tid_set;
     }
