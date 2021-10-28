@@ -716,7 +716,7 @@ A simple hook to make the process wait
 
   rule <timeoutEvents> .Set => #getTimeout </timeoutEvents>
        <pendingTimers> PT </pendingTimers>
-    requires PT >Int 0  [prec(300)]
+    requires PT >Int 0  [priority(300)]
 
 endmodule
 ```

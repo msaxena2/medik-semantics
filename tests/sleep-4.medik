@@ -1,0 +1,33 @@
+machine SleepMachine {
+  vars name, sleepTime;
+  init state Start {
+    entry (name, sleepTime){
+      this.name = name;
+      this.sleepTime = sleepTime;
+    }
+    on Start do {
+      goto PostStart;
+    }
+  }
+  state PostStart {
+    entry {
+      var i = 0;
+      print("[" + this.name + "]: Pre Sleep\n");
+      sleep(this.sleepTime);
+      print("[" + this.name + "]: Post Sleep\n");
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      var a = new SleepMachine("A", 5);
+      var b = new SleepMachine("B", 3);
+      var c = new SleepMachine("C", 1);
+      send a, Start;
+      send b, Start;
+      send c, Start;
+    }
+  }
+}
