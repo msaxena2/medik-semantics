@@ -25,11 +25,12 @@ module MEDIK-SYNTAX
                | String
                | UndefExp
                | ThisExp
-               | Exp "+" Exp                        [strict, left]
+               | "(" Exp ")"                        [bracket]
+               > Exp "." Exp                        [strict(1), left]
+               > Exp "+" Exp                        [strict, left]
                | Exp "-" Exp                        [strict, left]
                | Exp "*" Exp                        [strict, left]
                | Exp "/" Exp                        [strict, left]
-               | Exp "." Exp                        [strict(1), left]
                | Exp ">" Exp                        [strict, left]
                | Exp "<" Exp                        [strict, left]
                | Exp ">=" Exp                       [strict, left]
@@ -38,7 +39,6 @@ module MEDIK-SYNTAX
                | Exp "&&" Exp                       [strict(1)]
                | Exp "||" Exp                       [strict]
                > Exp "==" Exp                       [strict, left]
-               | "(" Exp ")"                        [bracket]
                | "sleep" "(" Exp ")"                [strict(1)]
                | Id "(" Exps ")"                    [strict(2)]
                | "new" Id "(" Exps ")"              [strict(2)]

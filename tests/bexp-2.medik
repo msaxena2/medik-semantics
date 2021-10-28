@@ -1,0 +1,20 @@
+machine StringTest {
+  var toPrint;
+  init state Start {
+    entry(toPrint) {
+      this.toPrint = toPrint;
+      if (this.toPrint == "hello world") {
+        print("eq operator precedence ok\n");
+      } else {
+        print("Oops. Precedence issue\n");
+      }
+    }
+  }
+}
+init machine Driver {
+  init state Start {
+    entry {
+      new StringTest("hello world");
+    }
+  }
+}
