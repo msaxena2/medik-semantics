@@ -1,0 +1,21 @@
+machine A {
+  init state A {
+    on start do {
+      goto B;
+    }
+  }
+  state B {
+    entry {
+      print("Entered B");
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      var a = new A();
+      send a, start;
+    }
+  }
+}
