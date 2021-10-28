@@ -37,6 +37,7 @@ module MEDIK-SYNTAX
                | "!" Exp                            [strict, left]
                | Exp "&&" Exp                       [strict(1)]
                | Exp "||" Exp                       [strict]
+               > Exp "==" Exp                       [strict, left]
                | "(" Exp ")"                        [bracket]
                | "sleep" "(" Exp ")"                [strict(1)]
                | Id "(" Exps ")"                    [strict(2)]
@@ -397,6 +398,10 @@ module MEDIK
   rule false && _ => false
   rule true  || _ => true
   rule false || B => B
+
+  rule I1 == I2 => I1 ==Int I2
+  rule S1 == S2 => S1 ==String S2
+  rule B1 == B2 => B1 ==Bool B2
 ```
 
 #### Instance creation via new
