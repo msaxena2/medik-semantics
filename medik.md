@@ -25,16 +25,16 @@ module MEDIK-SYNTAX
                | String
                | UndefExp
                | ThisExp
-               | Exp "+" Exp                        [strict]
-               | Exp "-" Exp                        [strict]
-               | Exp "*" Exp                        [strict]
-               | Exp "/" Exp                        [strict]
+               | Exp "+" Exp                        [strict, left]
+               | Exp "-" Exp                        [strict, left]
+               | Exp "*" Exp                        [strict, left]
+               | Exp "/" Exp                        [strict, left]
                | Exp "." Exp                        [strict(1), left]
-               | Exp ">" Exp                        [strict]
-               | Exp "<" Exp                        [strict]
-               | Exp ">=" Exp                       [strict]
-               | Exp "<=" Exp                       [strict]
-               | "!" Exp                            [strict]
+               | Exp ">" Exp                        [strict, left]
+               | Exp "<" Exp                        [strict, left]
+               | Exp ">=" Exp                       [strict, left]
+               | Exp "<=" Exp                       [strict, left]
+               | "!" Exp                            [strict, left]
                | Exp "&&" Exp                       [strict(1)]
                | Exp "||" Exp                       [strict]
                | "(" Exp ")"                        [bracket]
@@ -375,6 +375,10 @@ module MEDIK
   rule I1 / I2 => I1 /Int I2
     requires I2 =/=K 0
   rule _ / 0 => undef
+
+  rule S1       + S2       => S1 +String S2
+  rule S:String + I:Int    => S +String Int2String(I)
+  rule I:Int    + S:String => Int2String(I) +String S
 ```
 
 #### Boolean Expressions

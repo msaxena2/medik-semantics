@@ -1,0 +1,9 @@
+init machine String1 {
+  init state Start {
+    entry {
+      print("String " + 1 + "\n");
+      print(1 + " String\n");
+      print("Hello" + " world\n");
+    }
+  }
+}
