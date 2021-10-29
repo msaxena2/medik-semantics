@@ -1,0 +1,22 @@
+machine GotoMachine {
+  init state Start {
+    entry {
+      goto PostStart;
+    }
+  }
+  state PostStart {
+    entry {
+      sleep(5);
+      print("Goto Machine\n");
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      new GotoMachine();
+      print("Driver Machine\n"); // Should happen before Goto's print
+    }
+  }
+}

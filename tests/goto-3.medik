@@ -1,0 +1,28 @@
+machine GotoMachine {
+  var count;
+  init state Start {
+    entry {
+      this.count = 0;
+      goto PostStart;
+    }
+  }
+  state PostStart {
+    entry {
+      if (count < 3) {
+        sleep(1);
+        print("Goto Machine\n");
+        count = count + 1;
+        goto PostStart;
+      }
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      new GotoMachine();
+      print("Driver Machine\n"); // Should happen before Goto's print
+    }
+  }
+}
