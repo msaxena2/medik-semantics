@@ -547,11 +547,19 @@ module MEDIK
 ```
 ##### Semantics of goto
 
+Goto results in a context switch. If a caller is waiting on execution,
+it is unblocked before the switch occurs.
+
 ```k
-  rule goto Target:Id ( Args:Vals )
-    =>    recordEnv
-       ~> execEntryCode( Target , Args )
-       ~> execEventHandlers
+  syntax KItem ::= "clearEnv"
+
+  rule <k> goto Target:Id ( Args:Vals ) ~> _
+       =>    unblockCaller
+          ~> recordEnv
+          ~> execEntryCode( Target , Args )
+          ~> execEventHandlers </k>
+       <env> _ => .Map </env>
+       <stack> _ => .List </stack>
 ```
 #### Event Handling
 
