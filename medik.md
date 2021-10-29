@@ -142,7 +142,6 @@ module MEDIK
 ### Macros
 
 ```k
-  rule { S:Stmt } => S                                          [structural]
   rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2, Is;  [macro-rec]
   rule vars I::Id , .Ids ; => var I;                            [macro]
   rule entry B:Block => entry (.Ids) B                          [macro]
@@ -380,6 +379,12 @@ module MEDIK
   rule S1       + S2       => S1 +String S2
   rule S:String + I:Int    => S +String Int2String(I)
   rule I:Int    + S:String => Int2String(I) +String S
+```
+
+#### Blocks
+```k
+
+  rule { S:Stmt } => recordEnv ~> S ~> restoreEnv
 ```
 
 #### Boolean Expressions
