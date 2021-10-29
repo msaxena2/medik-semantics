@@ -107,6 +107,7 @@ module MEDIK
                     <stack> .List </stack>
                     <inBuffer> .List </inBuffer>
                     <activeState> . </activeState>
+                    <callerId> . </callerId>
                   </instance>
                 </instances>
                 <machines>
@@ -413,9 +414,9 @@ module MEDIK
 
 ```k
   syntax KItem ::= "execEntryCode"  "(" stateName: Id "," entryArgs: Vals ")"
-                 | "returnControl"  "(" machineId: Int ")"
                  | "asGlobalDecls"  "(" decls: Stmt ")"
                  | "execEntryBlock" "(" Vals ")"
+                 | "unblockCaller"
                  | "recordEnv"
                  | "restoreEnv"
                  | "execEventHandlers"
@@ -432,9 +433,10 @@ module MEDIK
                     <id> Loc </id>
                     <k> asGlobalDecls(MachineDecls)
                      ~> execEntryCode(InitState, Args)
-                     ~> returnControl(SourceId)
+                     ~> unblockCaller
                      ~> execEventHandlers </k>
-                    <class> MName </class> ...
+                    <class> MName </class>
+                    <callerId> SourceId </callerId> ...
                    </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
@@ -452,9 +454,10 @@ module MEDIK
         ( .Bag => <instance>
                     <id> Loc </id>
                     <k> execEntryCode(InitState, Args)
-                     ~> returnControl(SourceId)
+                     ~> unblockCaller
                      ~> execEventHandlers </k>
-                    <class> MName </class> ...
+                    <class> MName </class>
+                    <callerId> SourceId </callerId> ...
                    </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
@@ -477,8 +480,12 @@ module MEDIK
        </instance>
        <instance>
         <id> TargetId </id>
-        <k> returnControl(SourceId) => . ... </k>  ...
+        <k> unblockCaller => . ... </k>
+        <callerId> SourceId => . </callerId> ...
        </instance>
+
+  rule <k> unblockCaller => . ... </k>
+       <callerId> . </callerId>
 
   rule <k> execEntryCode(SName, Vals)
         =>   recordEnv
@@ -676,9 +683,10 @@ module MEDIK
   rule <id> SourceId  </id>
        <k> constructObj( { Pairs:JSONs } ) => wait ... </k>
        ( .Bag =>  <instance>
-                    <k> JSONs2Obj(Pairs) ~> returnControl(SourceId) </k>
+                    <k> JSONs2Obj(Pairs) ~> unblockCaller </k>
                     <id> Loc </id>
-                    <class> $Dynamic </class> ...
+                    <class> $Dynamic </class>
+                    <callerId> SourceId </callerId> ...
                   </instance> )
        <nextLoc> Loc:Int => Loc +Int 1 </nextLoc>
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
