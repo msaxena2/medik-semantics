@@ -1,0 +1,41 @@
+machine Broadcaster {
+  init state Start {
+    entry(subscriber) {
+      sleep(1);
+      broadcast eTick;
+      if (subscriber.name == "B") {
+        send subscriber, eTick;
+      }
+    }
+  }
+}
+
+machine RecieverA recieves eTick {
+  init state Start {
+    on eTick do {
+      print("Tick\n");
+    }
+  }
+}
+
+machine RecieverB {
+  var name;
+  init state Start {
+    entry {
+      this.name = "B";
+    }
+    on eTick do {
+      print("Tick\n");
+    }
+  }
+}
+
+init machine Starter {
+    init state Start {
+      entry {
+        new RecieverA();
+        var b = new RecieverB(); // should recieve "tick" as sent directly
+        new Broadcaster(b);
+      }
+    }
+}

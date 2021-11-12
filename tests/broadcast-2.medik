@@ -1,0 +1,34 @@
+machine Broadcaster {
+  init state Start {
+    entry {
+      sleep(1);
+      broadcast eTick;
+    }
+  }
+}
+
+machine RecieverA recieves eTick {
+  init state Start {
+    on eTick do {
+      print("Tick\n");
+    }
+  }
+}
+
+machine RecieverB recieves eTick {
+  init state Start {
+    on eTick do {
+      print("Tick\n");
+    }
+  }
+}
+
+init machine Starter {
+    init state Start {
+      entry {
+        new RecieverA();
+        new RecieverB();
+        new Broadcaster();
+      }
+    }
+}
