@@ -119,6 +119,7 @@ module MEDIK
                     <machineName> $Main </machineName>
                     <declarationCode> . </declarationCode>
                     <isInitMachine> false </isInitMachine>
+                    <recieveEvents> .Set </recieveEvents>
                     <states>
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
@@ -138,6 +139,7 @@ module MEDIK
                     </states>
                   </machine>
                 </machines>
+                <activeInstances> ListItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
                 <timeoutEvents> .Set </timeoutEvents>
@@ -153,6 +155,11 @@ module MEDIK
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
   rule send Id , Event => send Id, Event, ( .Vals )             [macro]
   rule goto State:Id => goto State ( .Vals )                    [macro]
+  rule machine Name:Id Code
+    => machine Name recieves .Ids Code                          [macro]
+  rule init machine Name:Id Code
+    => init machine Name recieves .Ids Code                     [macro]
+  rule broadcast Event => broadcast Event, ( .Vals )            [macro]
   rule while (Cond) Block
    => if (Cond) { Block while (Cond) Block }                    [structural]
 ```
@@ -169,20 +176,27 @@ module MEDIK
                  | "createInstance"          "(" machineName: Id ")"
                  | "createInitInstance"
 
-  rule createMachineTemplates(S Ss) => createMachineTemplates(S) ~> createMachineTemplates(Ss)
-  rule <k> createMachineTemplates(machine Name ({ Code } #as CodeBlock:Block))
-        => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
-       <machines>
-         ( .Bag =>  <machine>
-                      <machineName> Name </machineName> ...
-                    </machine> ) ...
-       </machines>
+  syntax Set ::= "asSet" "(" Ids ")" [function]
 
-  rule <k> createMachineTemplates(init machine Name ({ Code } #as CodeBlock))
+  rule asSet(I:Id, Is:Ids) => SetItem(I) asSet(Is)
+  rule asSet(.Ids)         => .Set
+
+  rule createMachineTemplates(S Ss) => createMachineTemplates(S) ~> createMachineTemplates(Ss)
+  rule <k> createMachineTemplates(machine Name recieves InEvents ({ Code } #as CodeBlock:Block))
         => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
        <machines>
          ( .Bag =>  <machine>
                       <machineName> Name </machineName>
+                      <recieveEvents> asSet(InEvents) </recieveEvents> ...
+                    </machine> ) ...
+       </machines>
+
+  rule <k> createMachineTemplates(init machine Name recieves InEvents ({ Code } #as CodeBlock))
+        => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
+       <machines>
+         ( .Bag =>  <machine>
+                      <machineName> Name </machineName>
+                      <recieveEvents> asSet(InEvents) </recieveEvents>
                       <isInitMachine> true </isInitMachine> ...
                     </machine> ) ...
        </machines>
@@ -444,6 +458,7 @@ module MEDIK
                    </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
+       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
        <machine>
         <machineName> MName </machineName>
         <declarationCode> MachineDecls </declarationCode>
@@ -465,6 +480,7 @@ module MEDIK
                    </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
+       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
        <machine>
         <machineName> MName </machineName>
         <declarationCode> . </declarationCode>
@@ -570,7 +586,27 @@ it is unblocked before the switch occurs.
 ##### Sending Events
 ```k
   syntax Val ::= "done"
-  syntax KItem ::= "eventArgsPair" "(" eventId: Id "|" args: Vals ")"
+  syntax KItem ::= "eventArgsPair"    "(" eventId: Id "|" args: Vals ")"
+                 | "performBroadcast" "(" eventId: Id "|" args: Vals "|" List ")"
+
+  syntax List ::= "getRecievers"    "(" eventId: Id ")"          [function]
+  syntax List ::= "getRecieversAux" "(" eventId: Id "|" List ")" [function]
+
+  rule [[ getRecievers(Event) => getRecieversAux(Event | ActiveInstances) ]]
+       <activeInstances> ActiveInstances </activeInstances>
+
+  rule [[ getRecieversAux(Event | ListItem(Id) Rest) => ListItem(Id) getRecieversAux(Event | Rest) ]]
+       <instance>
+        <id> Id </id>
+        <class> Name </class> ...
+       </instance>
+       <machine>
+        <machineName> Name </machineName>
+        <recieveEvents> SetItem(Event) ... </recieveEvents> ...
+       </machine>
+
+  rule getRecieversAux(_     | .List)            => .List
+  rule getRecieversAux(Event | ListItem(_) Rest) => getRecieversAux(Event | Rest) [owise]
 
   rule <instance>
         <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
@@ -584,6 +620,15 @@ it is unblocked before the switch occurs.
   rule <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
        <id> Id </id>
        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
+
+  rule broadcast EventName:Id , ( Args )
+    => performBroadcast ( EventName | Args | getRecievers(EventName))
+
+  rule performBroadcast ( EventName | Args | ListItem(Id) Recievers)
+    =>   send instance(Id), EventName, ( Args ) ;
+      ~> performBroadcast ( EventName | Args | Recievers)
+
+  rule performBroadcast(_ | _ | .List) => done
 ```
 
 ##### Dequeueing Events
