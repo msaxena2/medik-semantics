@@ -1,0 +1,32 @@
+machine Broadcaster {
+  var subscriber;
+  init state Start {
+    entry(subscriber) {
+      this.subscriber = subscriber;
+      var i = 0;
+      while(i < 5) {
+        broadcast eTick;
+        sleep(1);
+        i = i + 1;
+      }
+    }
+  }
+}
+
+init machine Receiver
+  recieves eTick {
+    init state Start {
+      entry {
+        new Broadcaster(this);
+        goto Recieve;
+      }
+    }
+
+    state Recieve {
+      on eTick do {
+        print("Recieved Tick\n");
+        goto Recieve;
+      }
+    }
+}
+
