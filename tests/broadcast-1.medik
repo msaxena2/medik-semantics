@@ -14,7 +14,7 @@ machine Broadcaster {
 }
 
 init machine Receiver
-  recieves eTick {
+  receives eTick {
     init state Start {
       entry {
         new Broadcaster(this);

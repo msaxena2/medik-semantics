@@ -7,7 +7,7 @@ machine Broadcaster {
   }
 }
 
-machine RecieverA recieves eTick {
+machine RecieverA receives eTick {
   init state Start {
     on eTick do {
       print("Tick\n");
@@ -15,7 +15,7 @@ machine RecieverA recieves eTick {
   }
 }
 
-machine RecieverB recieves eTick {
+machine RecieverB receives eTick {
   init state Start {
     on eTick do {
       print("Tick\n");

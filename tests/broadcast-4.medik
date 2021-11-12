@@ -10,7 +10,7 @@ machine Broadcaster {
   }
 }
 
-machine RecieverA recieves eTick {
+machine RecieverA receives eTick {
   init state Start {
     on eTick do {
       print("Tick\n");
@@ -34,7 +34,7 @@ init machine Starter {
     init state Start {
       entry {
         new RecieverA();
-        var b = new RecieverB(); // should recieve "tick" as sent directly
+        var b = new RecieverB(); // should receive "tick" as sent directly
         new Broadcaster(b);
       }
     }

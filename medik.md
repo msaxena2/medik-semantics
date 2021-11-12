@@ -67,9 +67,9 @@ module MEDIK-SYNTAX
                 | "on" Id "(" Ids ")" "do" Block
                 | StateDecl
                 > "machine" Id Block
-                | "machine" Id "recieves" Ids Block
+                | "machine" Id "receives" Ids Block
                 | "init" "machine" Id Block
-                | "init" "machine" Id "recieves" Ids Block
+                | "init" "machine" Id "receives" Ids Block
                 > Stmt Stmt                                [right]
 
   syntax StateDecl ::= "state" Id Block
@@ -119,7 +119,7 @@ module MEDIK
                     <machineName> $Main </machineName>
                     <declarationCode> . </declarationCode>
                     <isInitMachine> false </isInitMachine>
-                    <recieveEvents> .Set </recieveEvents>
+                    <receiveEvents> .Set </receiveEvents>
                     <states>
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
@@ -156,9 +156,9 @@ module MEDIK
   rule send Id , Event => send Id, Event, ( .Vals )             [macro]
   rule goto State:Id => goto State ( .Vals )                    [macro]
   rule machine Name:Id Code
-    => machine Name recieves .Ids Code                          [macro]
+    => machine Name receives .Ids Code                          [macro]
   rule init machine Name:Id Code
-    => init machine Name recieves .Ids Code                     [macro]
+    => init machine Name receives .Ids Code                     [macro]
   rule broadcast Event => broadcast Event, ( .Vals )            [macro]
   rule while (Cond) Block
    => if (Cond) { Block while (Cond) Block }                    [structural]
@@ -182,21 +182,21 @@ module MEDIK
   rule asSet(.Ids)         => .Set
 
   rule createMachineTemplates(S Ss) => createMachineTemplates(S) ~> createMachineTemplates(Ss)
-  rule <k> createMachineTemplates(machine Name recieves InEvents ({ Code } #as CodeBlock:Block))
+  rule <k> createMachineTemplates(machine Name receives InEvents ({ Code } #as CodeBlock:Block))
         => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
        <machines>
          ( .Bag =>  <machine>
                       <machineName> Name </machineName>
-                      <recieveEvents> asSet(InEvents) </recieveEvents> ...
+                      <receiveEvents> asSet(InEvents) </receiveEvents> ...
                     </machine> ) ...
        </machines>
 
-  rule <k> createMachineTemplates(init machine Name recieves InEvents ({ Code } #as CodeBlock))
+  rule <k> createMachineTemplates(init machine Name receives InEvents ({ Code } #as CodeBlock))
         => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
        <machines>
          ( .Bag =>  <machine>
                       <machineName> Name </machineName>
-                      <recieveEvents> asSet(InEvents) </recieveEvents>
+                      <receiveEvents> asSet(InEvents) </receiveEvents>
                       <isInitMachine> true </isInitMachine> ...
                     </machine> ) ...
        </machines>
@@ -602,7 +602,7 @@ it is unblocked before the switch occurs.
        </instance>
        <machine>
         <machineName> Name </machineName>
-        <recieveEvents> SetItem(Event) ... </recieveEvents> ...
+        <receiveEvents> SetItem(Event) ... </receiveEvents> ...
        </machine>
 
   rule getRecieversAux(_     | .List)            => .List
