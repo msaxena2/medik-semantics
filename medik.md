@@ -44,6 +44,8 @@ module MEDIK-SYNTAX
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
                | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               | "broadcast" Id
+               | "broadcast" Id "," "(" Exps ")"    [strict(2)]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
                > Exp "=" Exp                        [strict(2)]
@@ -54,10 +56,10 @@ module MEDIK-SYNTAX
   syntax DeclExp ::= "var" Id
                    | "vars" Ids
 
-  syntax Stmt ::= Exp ";"                              [strict]
+  syntax Stmt ::= Exp ";"                                  [strict]
                 | Block
-                > "if" "(" Exp ")" Block              [strict(1)]
-                | "if" "(" Exp ")" Block "else" Block [strict(1)]
+                > "if" "(" Exp ")" Block                   [strict(1)]
+                | "if" "(" Exp ")" Block "else" Block      [strict(1)]
                 | "while" "(" Exp ")" Block
                 | "entry" Block
                 | "entry" "(" Ids ")" Block
@@ -65,8 +67,10 @@ module MEDIK-SYNTAX
                 | "on" Id "(" Ids ")" "do" Block
                 | StateDecl
                 > "machine" Id Block
+                | "machine" Id "recieves" Ids Block
                 | "init" "machine" Id Block
-                > Stmt Stmt                            [right]
+                | "init" "machine" Id "recieves" Ids Block
+                > Stmt Stmt                                [right]
 
   syntax StateDecl ::= "state" Id Block
                      | "init" "state" Id Block
