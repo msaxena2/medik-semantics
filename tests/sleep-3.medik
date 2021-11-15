@@ -25,6 +25,7 @@ init machine Driver {
       var a = new SleepMachine("A", 5);
       var b = new SleepMachine("B", 1);
       send a, Start;
+      sleep(1);
       send b, Start;
     }
   }
