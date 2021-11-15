@@ -11,7 +11,7 @@ module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
 
   syntax Ids ::= List{Id, ","}
-  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps)]
+  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), exps]
   syntax UndefExp ::= "undef"
 
   syntax Val
@@ -43,7 +43,7 @@ module MEDIK-SYNTAX
                | Id "(" Exps ")"                    [strict(2)]
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
-               | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               | "send" Exp "," Id "," "(" Exps ")" [strict(1), sendExp]
                | "broadcast" Id
                | "broadcast" Id "," "(" Exps ")"    [strict(2)]
                | "goto" Id
@@ -54,6 +54,8 @@ module MEDIK-SYNTAX
                | "print" "(" Exp ")"                [strict]
                | DeclExp
                | "extern" Id "(" Exps ")"
+
+  syntax priorities sendExp > exps
 
   syntax DeclExp ::= "var" Id
                    | "vars" Ids
@@ -77,7 +79,6 @@ module MEDIK-SYNTAX
 
   syntax StateDecl ::= "state" Id Block
                      | "init" "state" Id Block
-
 
   syntax Block ::= "{" "}"
                  | "{" Stmt "}"
