@@ -1,0 +1,18 @@
+init machine MethodMachine {
+  fun doReturn() {
+    return "Hello";
+  }
+
+  init state Start {
+    entry {
+      goto DoPrint;
+    }
+  }
+
+  state DoPrint {
+    entry {
+      var output = doReturn() + "\n";
+      print(output); // should output "hello"
+    }
+  }
+}
