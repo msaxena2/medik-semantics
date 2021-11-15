@@ -48,6 +48,8 @@ module MEDIK-SYNTAX
                | "broadcast" Id "," "(" Exps ")"    [strict(2)]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
+               | "return"
+               | "return" Exp                       [strict(1)]
                > Exp "=" Exp                        [strict(2)]
                | "print" "(" Exp ")"                [strict]
                | DeclExp
@@ -65,6 +67,7 @@ module MEDIK-SYNTAX
                 | "entry" "(" Ids ")" Block
                 | "on" Id "do" Block
                 | "on" Id "(" Ids ")" "do" Block
+                | "fun" Id "(" Ids ")" Block
                 | StateDecl
                 > "machine" Id Block
                 | "machine" Id "receives" Ids Block
@@ -74,6 +77,7 @@ module MEDIK-SYNTAX
 
   syntax StateDecl ::= "state" Id Block
                      | "init" "state" Id Block
+
 
   syntax Block ::= "{" "}"
                  | "{" Stmt "}"
@@ -108,6 +112,7 @@ module MEDIK
                     <env> .Map </env>
                     <genv> .Map </genv>
                     <class> $Main </class>
+                    <fstack> .List </fstack>
                     <stack> .List </stack>
                     <inBuffer> .List </inBuffer>
                     <activeState> . </activeState>
@@ -137,6 +142,13 @@ module MEDIK
                         </eventHandlers>
                       </state>
                     </states>
+                    <functions>
+                      <function multiplicity="*" type="Map">
+                        <functionName> . </functionName>
+                        <functionArgs> . </functionArgs>
+                        <functionCode> . </functionCode>
+                      </function>
+                    </functions>
                   </machine>
                 </machines>
                 <activeInstances> ListItem(0) </activeInstances>
@@ -208,6 +220,17 @@ module MEDIK
        <machine>
         <machineName> Name </machineName>
         <declarationCode> . => { E ; }:>Stmt </declarationCode> ...
+       </machine>
+
+  rule <k> createDeclarationCode(Name, fun FunName:Id ( Args ) Block) => . ...  </k>
+       <machine>
+        <machineName> Name </machineName>
+        <functions> ( .Bag => <function>
+                                <functionName> FunName </functionName>
+                                <functionArgs> Args </functionArgs>
+                                <functionCode> Block </functionCode> ...
+                              </function> ) ...
+        </functions> ...
        </machine>
 
   rule createDeclarationCode(_, _) => . [owise]
@@ -493,7 +516,6 @@ module MEDIK
   rule asGlobalDecls(S Ss) => asGlobalDecls(S) ~> asGlobalDecls(Ss)
   rule asGlobalDecls(var Id;) => var this . Id;
 
-
   rule <instance>
         <id> SourceId </id>
         <k> wait => instance(TargetId) ... </k> ...
@@ -672,6 +694,36 @@ it is unblocked before the switch occurs.
 
   rule if (true) Block else _  => Block
   rule if (false) _ else Block => Block
+```
+
+#### Methods
+
+```k
+  syntax KItem ::= "fstackItem" "(" Map "|" K ")"
+
+  rule <k> FunName:Id ( Vals ) ~> Rest
+        => assign(Args | Vals) ~> FunCode ~> return;
+       </k>
+       <class> CName </class>
+       <machine>
+        <machineName> CName </machineName>
+        <function>
+          <functionName> FunName </functionName>
+          <functionArgs> Args </functionArgs>
+          <functionCode> FunCode </functionCode> ...
+        </function> ...
+       </machine>
+       <fstack> (.List => ListItem(fstackItem(Rho | Rest))) ... </fstack>
+       <env> Rho </env>
+
+  rule <k> return ~> _ => done ~> Rest </k>
+       <env> _ => Rho </env>
+       <fstack> (ListItem(fstackItem(Rho | Rest)) => .List) ... </fstack>
+
+  rule <k> return V:Val ~> _ => V ~> Rest </k>
+       <env> _ => Rho </env>
+       <fstack> (ListItem(fstackItem(Rho | Rest)) => .List) ... </fstack>
+
 ```
 
 #### IPC via extern
