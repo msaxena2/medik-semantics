@@ -1,0 +1,17 @@
+init machine MethodMachine {
+  fun doPrint() {
+    print("Method\n");
+  }
+
+  init state Start {
+    entry {
+      goto DoPrint;
+    }
+  }
+
+  state DoPrint {
+    entry {
+      doPrint(); // should result in print
+    }
+  }
+}
