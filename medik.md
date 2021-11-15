@@ -26,6 +26,7 @@ module MEDIK-SYNTAX
                | UndefExp
                | ThisExp
                | "(" Exp ")"                        [bracket]
+               | Id "(" Exps ")"                    [strict(2)]
                > Exp "." Exp                        [strict(1), left]
                > Exp "+" Exp                        [strict, left]
                | Exp "-" Exp                        [strict, left]
@@ -40,12 +41,11 @@ module MEDIK-SYNTAX
                | Exp "||" Exp                       [strict]
                > Exp "==" Exp                       [strict, left]
                | "sleep" "(" Exp ")"                [strict(1)]
-               | Id "(" Exps ")"                    [strict(2)]
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
                | "send" Exp "," Id "," "(" Exps ")" [strict(1), sendExp]
                | "broadcast" Id
-               | "broadcast" Id "," "(" Exps ")"    [strict(2)]
+               | "broadcast" Id "," "(" Exps ")"    [strict(2), broadcastExp]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
                | "return"
@@ -55,7 +55,7 @@ module MEDIK-SYNTAX
                | DeclExp
                | "extern" Id "(" Exps ")"
 
-  syntax priorities sendExp > exps
+  syntax priorities sendExp broadcastExp > exps
 
   syntax DeclExp ::= "var" Id
                    | "vars" Ids
