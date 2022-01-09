@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from argparse import ArgumentParser
-import subprocess, os, sys, requests, json, tempfile
+import subprocess, os, sys, json, tempfile
 
 
 base_dir     = Path(__file__).parents[0]
