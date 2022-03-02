@@ -54,6 +54,8 @@ module MEDIK-SYNTAX
                | "print" "(" Exp ")"                [strict]
                | DeclExp
                | "extern" Id "(" Exps ")"
+               | "parseInt" "(" Exp ")"             [strict]
+
 
   syntax priorities sendExp broadcastExp > exps
 
@@ -840,6 +842,11 @@ A simple hook to make the process wait
   rule <timeoutEvents> .Set => #getTimeout </timeoutEvents>
        <pendingTimers> PT </pendingTimers>
     requires PT >Int 0  [priority(300)]
+```
+#### Simple Functions For Conversions
+
+```k
+  rule parseInt(S:String) => String2Int(S)
 
 endmodule
 ```

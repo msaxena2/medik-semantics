@@ -1,0 +1,8 @@
+init machine ParseInt {
+  init state ParseInt {
+    entry {
+      var s = parseInt("1" + "2");
+      print(s);
+    }
+  }
+}
