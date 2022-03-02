@@ -14,7 +14,7 @@ module MEDIK-SYNTAX
   syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), exps]
   syntax UndefExp ::= "undef"
 
-  syntax Val
+  syntax Val ::= "null"
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
 
   syntax ThisExp ::= "this"
@@ -780,6 +780,9 @@ it is unblocked before the switch occurs.
 
   rule JSON2Obj(Field : S:String)
     => var this.String2Id(Field); this.String2Id(Field) = S;
+
+  rule JSON2Obj(Field : null)
+    => var this.String2Id(Field); this.String2Id(Field) = undef;
 
   rule JSON2Obj(Field : B:Bool)
     => var this.String2Id(Field); this.String2Id(Field) = B;
