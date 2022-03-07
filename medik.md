@@ -14,7 +14,7 @@ module MEDIK-SYNTAX
   syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), exps]
   syntax UndefExp ::= "undef"
 
-  syntax Val ::= "null"
+  syntax Val
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
 
   syntax ThisExp ::= "this"
@@ -48,14 +48,13 @@ module MEDIK-SYNTAX
                | "broadcast" Id "," "(" Exps ")"    [strict(2), broadcastExp]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
-               | "return"
-               | "return" Exp                       [strict(1)]
                > Exp "=" Exp                        [strict(2)]
                | "print" "(" Exp ")"                [strict]
                | DeclExp
                | "extern" Id "(" Exps ")"
                | "parseInt" "(" Exp ")"             [strict]
-
+               | "return"
+               | "return" Exp                       [strict(1)]
 
   syntax priorities sendExp broadcastExp > exps
 
@@ -98,7 +97,7 @@ module MEDIK
   imports JSON
   imports K-REFLECTION
 
-  syntax Val ::= Int | Bool | String | UndefExp
+  syntax Val ::= "null" | Int | Bool | String | UndefExp
   syntax Exp ::= Val
   syntax Exps ::= Vals
 
@@ -452,6 +451,8 @@ module MEDIK
   rule I1 == I2 => I1 ==Int I2
   rule S1 == S2 => S1 ==String S2
   rule B1 == B2 => B1 ==Bool B2
+
+  rule undef == undef => true
 ```
 
 #### Instance creation via new
@@ -773,6 +774,7 @@ it is unblocked before the switch occurs.
 
   rule result2Obj({ "result" : S:String })                => S
   rule result2Obj({ "result" : I:Int })                   => I
+  rule result2Obj({ "result" : null })                    => undef
   rule result2Obj({ "result" : (({ _:JSONs }) #as Obj )}) => constructObj(Obj)
 
   rule JSON2Obj(Field : I:Int)
