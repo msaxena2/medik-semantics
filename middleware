@@ -3,12 +3,17 @@
 from pathlib import Path
 from argparse import ArgumentParser
 import subprocess, os, sys, json, tempfile
-
+import requests
+import logging
 
 base_dir     = Path(__file__).parents[0]
 kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
 krelease_dir = base_dir     / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
 kbin_dir     = krelease_dir / 'bin'
+
+# Change this to get value from a config file
+frontend_url = 'http://localhost:5000/'
+logging.basicConfig(filename='log-middleware', level=logging.DEBUG)
 
 class ImproperInvocationError(Exception):
     pass
@@ -25,6 +30,15 @@ def set_env():
 def success_json(payload):
     return { 'result': payload }
 
+def get_stats():
+    response = requests.get(frontend_url + 'get_stats')
+    return success_json(response.json())
+
+def send_msg(msg):
+    logging.info('sending: {}'.format(msg))
+    requests.post(frontend_url + 'send_msg', data=msg)
+    return success_json(None)
+
 # Function in middleware acessible to medik programs
 def echo(arg):
     return success_json(arg)
@@ -34,6 +48,10 @@ def handle_input(in_json):
     match in_json['name']:
         case 'echo':
             pretty_out = echo(*in_json['args'])
+        case 'get_stats':
+            pretty_out = get_stats()
+        case 'send_msg':
+            pretty_out = send_msg(*in_json['args'])
         case _:
             raise MethodNotPresentError('Specified method not found')
 
@@ -56,8 +74,7 @@ def handle_input(in_json):
     finally:
         os.remove(fp)
 
-def main():
-    if len(sys.argv) != 2:
+def main(): if len(sys.argv) != 2:
         raise ImproperInvocationError('Incorrect number of args in CLI Invocation')
 
     with open(sys.argv[1], 'r') as in_file:
