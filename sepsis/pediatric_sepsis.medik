@@ -1,0 +1,45 @@
+// Machine used to get initial statistics from the frontend
+init machine Initialization {
+  vars patientStats, validationTries;
+
+  fun get_stats() {
+    return extern get_stats();
+  }
+
+
+
+  init state initStats {
+    entry {
+      patientStats = get_stats();
+      validationTries = 0;
+      goto ValidateInput;
+    }
+  }
+
+  state ValidateInput {
+    entry {
+      validationTries = validationTries + 1;
+      if (validationTries == 5) {
+        print("Exceeded threshold. Shutting machines!\n");
+        goto Exit;
+      }
+      if (patientStats.HR == undef) {
+        extern send_msg("HR not specified\n");
+        print("Input from frontend incomplete. Will retry.\n");
+        sleep(5);
+        // revalidate input
+        goto ValidateInput;
+      } else {
+        print("Input Validated \n");
+        goto Exit;
+      }
+
+    }
+  }
+
+  state Exit {
+    entry {
+      print("Stopping medik machines\n");
+    }
+  }
+}
