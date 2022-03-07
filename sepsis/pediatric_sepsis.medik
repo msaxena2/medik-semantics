@@ -6,40 +6,73 @@ init machine Initialization {
     return extern get_stats();
   }
 
-
-
   init state initStats {
     entry {
-      patientStats = get_stats();
       validationTries = 0;
       goto ValidateInput;
     }
   }
 
+  fun send_msg_with_sleep(msg, sleepTime) {
+    print(msg + "\n");
+    extern send_msg(msg);
+    sleep(sleepTime);
+  }
+
   state ValidateInput {
     entry {
+      patientStats = get_stats();
       validationTries = validationTries + 1;
       if (validationTries == 5) {
         print("Exceeded threshold. Shutting machines!\n");
         goto Exit;
       }
       if (patientStats.HR == undef) {
-        extern send_msg("HR not specified\n");
-        print("Input from frontend incomplete. Will retry.\n");
-        sleep(5);
-        // revalidate input
+        send_msg_with_sleep("HR not specified", 3);
         goto ValidateInput;
-      } else {
-        print("Input Validated \n");
-        goto Exit;
       }
 
+      if (patientStats.Age == undef) {
+        send_msg_with_sleep("Age not specified", 3);
+        goto ValidateInput;
+      }
+
+      if (patientStats.RR == undef) {
+        send_msg_with_sleep("Respiratory Rate not specified", 3);
+        goto ValidateInput;
+      }
+
+      if (patientStats.Temp == undef) {
+        send_msg_with_sleep("Temperature not specified", 3);
+        goto ValidateInput;
+      } else {
+
+        print("Input Validated. Checking Sepsis \n");
+        new EvaluationMachine(patientStats);
+      }
     }
   }
 
   state Exit {
     entry {
       print("Stopping medik machines\n");
+    }
+  }
+}
+
+
+machine EvaluationMachine {
+  var patientStats;
+  init state Init {
+    entry(patientStats) {
+      this.patientStats = patientStats;
+      goto SepsisEvaluation;
+    }
+  }
+
+  state SepsisEvaluation {
+    entry {
+      print("evaluating sepsis\n");
     }
   }
 }

@@ -453,6 +453,7 @@ module MEDIK
   rule B1 == B2 => B1 ==Bool B2
 
   rule undef == undef => true
+  rule V:Val == undef => false requires V =/=K undef
 ```
 
 #### Instance creation via new

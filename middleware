@@ -74,7 +74,8 @@ def handle_input(in_json):
     finally:
         os.remove(fp)
 
-def main(): if len(sys.argv) != 2:
+def main():
+    if len(sys.argv) != 2:
         raise ImproperInvocationError('Incorrect number of args in CLI Invocation')
 
     with open(sys.argv[1], 'r') as in_file:
