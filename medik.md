@@ -38,7 +38,7 @@ module MEDIK-SYNTAX
                | Exp "<=" Exp                       [strict, left]
                | "!" Exp                            [strict, left]
                | Exp "&&" Exp                       [strict(1), left]
-               | Exp "||" Exp                       [strict]
+               | Exp "||" Exp                       [strict,    left]
                > Exp "==" Exp                       [strict, left]
                | "sleep" "(" Exp ")"                [strict(1)]
                | "new" Id "(" Exps ")"              [strict(2)]
