@@ -165,6 +165,7 @@ module MEDIK
 ```k
   rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2, Is;  [macro-rec]
   rule vars I::Id , .Ids ; => var I;                            [macro]
+  rule var I:Id = E:Exp ; => var I; I = E;                      [macro]
   rule entry B:Block => entry (.Ids) B                          [macro]
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
   rule send Id , Event => send Id, Event, ( .Vals )             [macro]
@@ -350,7 +351,6 @@ module MEDIK
 
 #### Variable Assignment and Lookup
 ```k
-  rule var I:Id = V:Val => var I; ~> I = V
   rule S:Stmt Ss:Stmt => S ~> Ss
 
   syntax Exp ::= "var" Exp "." Id [strict(1)]
