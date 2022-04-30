@@ -10,7 +10,8 @@ requires "json.md"
 module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
 
-  syntax Ids ::= List{Id, ","}
+  syntax Ids ::= List{Id, ","}    [ids]
+
   syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), exps]
   syntax UndefExp ::= "undef"
 
@@ -19,26 +20,35 @@ module MEDIK-SYNTAX
 
   syntax ThisExp ::= "this"
 
-  syntax Exp ::= Id
-               | Int
+  syntax DeclOrAssgn  ::= Id
+                        | Exp "=" Exp               [strict(2), declOrAssgn]
+
+  syntax DeclOrAssgns ::= List{DeclOrAssgn, ","}    [declOrAssgns]
+
+  syntax DeclOrAssgnExp ::= "var" DeclOrAssgn       [declOrAssgnExp]
+                          | "vars" DeclOrAssgns
+
+  syntax priorities declOrAssgn > declOrAssgnExp
+
+  syntax Exp ::= Int
                | Bool
                | String
                | UndefExp
                | ThisExp
                | "(" Exp ")"                        [bracket]
                | Id "(" Exps ")"                    [strict(2)]
-               > Exp "." Exp                        [strict(1), left]
-               > Exp "+" Exp                        [strict, left]
-               | Exp "-" Exp                        [strict, left]
-               | Exp "*" Exp                        [strict, left]
-               | Exp "/" Exp                        [strict, left]
-               | Exp ">" Exp                        [strict, left]
-               | Exp "<" Exp                        [strict, left]
-               | Exp ">=" Exp                       [strict, left]
-               | Exp "<=" Exp                       [strict, left]
-               | "!" Exp                            [strict, left]
-               | Exp "&&" Exp                       [strict(1), left]
-               | Exp "||" Exp                       [strict,    left]
+               > Exp "." Exp                        [strict(1), left, deref]
+               > Exp "+" Exp                        [strict, left, plusExp]
+               | Exp "-" Exp                        [strict, left, minusExp]
+               | Exp "*" Exp                        [strict, left, mulExp]
+               | Exp "/" Exp                        [strict, left, divExp]
+               | Exp ">" Exp                        [strict, left, gtExp]
+               | Exp "<" Exp                        [strict, left, ltExp]
+               | Exp ">=" Exp                       [strict, left, gteExp]
+               | Exp "<=" Exp                       [strict, left, lteExp]
+               | "!" Exp                            [strict, left, andExp]
+               | Exp "&&" Exp                       [strict(1), left, orExp]
+               | Exp "||" Exp                       [strict,    left, eqExp]
                > Exp "==" Exp                       [strict, left]
                | "sleep" "(" Exp ")"                [strict(1)]
                | "new" Id "(" Exps ")"              [strict(2)]
@@ -48,18 +58,18 @@ module MEDIK-SYNTAX
                | "broadcast" Id "," "(" Exps ")"    [strict(2), broadcastExp]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
-               > Exp "=" Exp                        [strict(2)]
+               > DeclOrAssgn
                | "print" "(" Exp ")"                [strict]
-               | DeclExp
+               | DeclOrAssgnExp
                | "extern" Id "(" Exps ")"
                | "parseInt" "(" Exp ")"             [strict]
                | "return"
                | "return" Exp                       [strict(1)]
 
   syntax priorities sendExp broadcastExp > exps
+  syntax priorities deref > declOrAssgn > exps
+  syntax priorities plusExp minusExp mulExp divExp gtExp ltExp gteExp lteExp andExp orExp > declOrAssgn > exps
 
-  syntax DeclExp ::= "var" Id
-                   | "vars" Ids
 
   syntax Stmt ::= Exp ";"                                  [strict]
                 | Block
@@ -163,8 +173,9 @@ module MEDIK
 ### Macros
 
 ```k
-  rule vars I1::Id, I2::Id, Is::Ids; => var I1 ;  vars I2, Is;  [macro-rec]
-  rule vars I::Id , .Ids ; => var I;                            [macro]
+  rule vars D1::DeclOrAssgn, D2::DeclOrAssgn, Ds::DeclOrAssgns;
+    => var D1 ;  vars D2, Ds;                                   [macro-rec]
+  rule vars D::DeclOrAssgn , .DeclOrAssgns ; => var D;          [macro]
   rule var I:Id = E:Exp ; => var I; I = E;                      [macro]
   rule entry B:Block => entry (.Ids) B                          [macro]
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
@@ -219,10 +230,17 @@ module MEDIK
   rule createDeclarationCode(Name, S Ss)
     => createDeclarationCode(Name, S) ~> createDeclarationCode(Name, Ss)
 
-  rule <k> createDeclarationCode(Name, E::DeclExp ;) => . ... </k>
+  // Todo: Refactor to remove redundancy in rules
+  rule <k> createDeclarationCode(Name, E::DeclOrAssgnExp ;) => . ... </k>
        <machine>
         <machineName> Name </machineName>
         <declarationCode> . => { E ; }:>Stmt </declarationCode> ...
+       </machine>
+
+  rule <k> createDeclarationCode(Name, E1:Exp = E2:Exp ;) => . ... </k>
+       <machine>
+        <machineName> Name </machineName>
+        <declarationCode> . => { E1 = E2 ; }:>Stmt </declarationCode> ...
        </machine>
 
   rule <k> createDeclarationCode(Name, fun FunName:Id ( Args ) Block) => . ...  </k>
@@ -238,12 +256,19 @@ module MEDIK
 
   rule createDeclarationCode(_, _) => . [owise]
 
-
-  rule <k> createDeclarationCode(Name, E::DeclExp ;) => . ... </k>
+  rule <k> createDeclarationCode(Name, E::DeclOrAssgnExp ;) => . ... </k>
        <machine>
         <machineName> Name </machineName>
         <declarationCode> S:Stmt => { S E; }:>Stmt </declarationCode> ...
        </machine>
+
+  rule <k> createDeclarationCode(Name, E1:Exp = E2:Exp ;) => . ... </k>
+       <machine>
+        <machineName> Name </machineName>
+        <declarationCode> S:Stmt => { S E1 = E2 ; }:>Stmt </declarationCode> ...
+       </machine>
+
+
 
   rule createTransitionSystem(MName, S Ss)
     => createTransitionSystem(MName, S) ~> createTransitionSystem(MName, Ss)
@@ -282,7 +307,7 @@ module MEDIK
   rule createStateDeclarations(MName, SName, S Ss)
     => createStateDeclarations(MName, SName, S) ~> createStateDeclarations(MName, SName, Ss)
 
-  rule <k> createStateDeclarations(MName, SName, E::DeclExp ;) => . ... </k>
+  rule <k> createStateDeclarations(MName, SName, E::DeclOrAssgnExp ;) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
@@ -291,7 +316,7 @@ module MEDIK
         </state> ...
       </machine>
 
-  rule <k> createStateDeclarations(MName, SName, E::DeclExp ;) => . ... </k>
+  rule <k> createStateDeclarations(MName, SName, E::DeclOrAssgnExp ;) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
