@@ -107,7 +107,7 @@ module MEDIK
   imports JSON
   imports K-REFLECTION
 
-  syntax Val ::= "null" | Int | Bool | String | UndefExp
+  syntax Val ::= "null" | "nothing" | Int | Bool | String | UndefExp
   syntax Exp ::= Val
   syntax Exps ::= Vals
 
@@ -134,13 +134,13 @@ module MEDIK
                 <machines>
                   <machine multiplicity="*" type="Map">
                     <machineName> $Main </machineName>
-                    <declarationCode> . </declarationCode>
+                    <declarationCode> nothing; </declarationCode>
                     <isInitMachine> false </isInitMachine>
                     <receiveEvents> .Set </receiveEvents>
                     <states>
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
-                        <stateDeclarations> . </stateDeclarations>
+                        <stateDeclarations> nothing; </stateDeclarations>
                         <entryBlock> . </entryBlock>
                         <args> . </args>
                         <isInitState> false </isInitState>
@@ -230,19 +230,6 @@ module MEDIK
   rule createDeclarationCode(Name, S Ss)
     => createDeclarationCode(Name, S) ~> createDeclarationCode(Name, Ss)
 
-  // Todo: Refactor to remove redundancy in rules
-  rule <k> createDeclarationCode(Name, E::DeclOrAssgnExp ;) => . ... </k>
-       <machine>
-        <machineName> Name </machineName>
-        <declarationCode> . => { E ; }:>Stmt </declarationCode> ...
-       </machine>
-
-  rule <k> createDeclarationCode(Name, E1:Exp = E2:Exp ;) => . ... </k>
-       <machine>
-        <machineName> Name </machineName>
-        <declarationCode> . => { E1 = E2 ; }:>Stmt </declarationCode> ...
-       </machine>
-
   rule <k> createDeclarationCode(Name, fun FunName:Id ( Args ) Block) => . ...  </k>
        <machine>
         <machineName> Name </machineName>
@@ -267,8 +254,6 @@ module MEDIK
         <machineName> Name </machineName>
         <declarationCode> S:Stmt => { S E1 = E2 ; }:>Stmt </declarationCode> ...
        </machine>
-
-
 
   rule createTransitionSystem(MName, S Ss)
     => createTransitionSystem(MName, S) ~> createTransitionSystem(MName, Ss)
@@ -313,15 +298,6 @@ module MEDIK
         <state>
           <stateName> SName </stateName>
           <stateDeclarations> S:Stmt => S E; </stateDeclarations> ...
-        </state> ...
-      </machine>
-
-  rule <k> createStateDeclarations(MName, SName, E::DeclOrAssgnExp ;) => . ... </k>
-       <machine>
-        <machineName> MName </machineName>
-        <state>
-          <stateName> SName </stateName>
-          <stateDeclarations> . => E; </stateDeclarations> ...
         </state> ...
       </machine>
 
@@ -520,30 +496,10 @@ module MEDIK
         </state> ...
        </machine>
 
-  rule  <id> SourceId </id>
-        <k> new MName ( Args ) => wait ... </k>
-        ( .Bag => <instance>
-                    <id> Loc </id>
-                    <k> execEntryCode(InitState, Args)
-                     ~> unblockCaller
-                     ~> execEventHandlers </k>
-                    <class> MName </class>
-                    <callerId> SourceId </callerId> ...
-                   </instance> )
-       <nextLoc> Loc => Loc +Int 1 </nextLoc>
-       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
-       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
-       <machine>
-        <machineName> MName </machineName>
-        <declarationCode> . </declarationCode>
-        <state>
-          <stateName> InitState </stateName>
-          <isInitState> true </isInitState> ...
-        </state> ...
-       </machine>
-
-  rule asGlobalDecls(S Ss) => asGlobalDecls(S) ~> asGlobalDecls(Ss)
+  rule asGlobalDecls(S:Stmt Ss:Stmt)
+    => asGlobalDecls(S) ~> asGlobalDecls(Ss)
   rule asGlobalDecls(var Id;) => var this . Id;
+  rule asGlobalDecls(S:Stmt) => S               [owise]
 
   rule <instance>
         <id> SourceId </id>
