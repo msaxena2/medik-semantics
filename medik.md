@@ -20,55 +20,44 @@ module MEDIK-SYNTAX
 
   syntax ThisExp ::= "this"
 
-  syntax DeclOrAssgn  ::= Id
-                        | Exp "=" Exp               [strict(2), declOrAssgn]
-
-  syntax DeclOrAssgns ::= List{DeclOrAssgn, ","}    [declOrAssgns]
-
-  syntax DeclOrAssgnExp ::= "var" DeclOrAssgn       [declOrAssgnExp]
-                          | "vars" DeclOrAssgns
-
-  syntax priorities declOrAssgn > declOrAssgnExp
-
-  syntax Exp ::= Int
+  syntax Exp ::= Id
+               | Int
                | Bool
                | String
                | UndefExp
                | ThisExp
                | "(" Exp ")"                        [bracket]
                | Id "(" Exps ")"                    [strict(2)]
-               > Exp "." Exp                        [strict(1), left, deref]
-               > Exp "+" Exp                        [strict, left, plusExp]
-               | Exp "-" Exp                        [strict, left, minusExp]
-               | Exp "*" Exp                        [strict, left, mulExp]
-               | Exp "/" Exp                        [strict, left, divExp]
-               | Exp ">" Exp                        [strict, left, gtExp]
-               | Exp "<" Exp                        [strict, left, ltExp]
-               | Exp ">=" Exp                       [strict, left, gteExp]
-               | Exp "<=" Exp                       [strict, left, lteExp]
-               | "!" Exp                            [strict, left, andExp]
-               | Exp "&&" Exp                       [strict(1), left, orExp]
-               | Exp "||" Exp                       [strict,    left, eqExp]
+               > Exp "." Exp                        [strict(1), left]
+               > Exp "+" Exp                        [strict, left]
+               | Exp "-" Exp                        [strict, left]
+               | Exp "*" Exp                        [strict, left]
+               | Exp "/" Exp                        [strict, left]
+               | Exp ">" Exp                        [strict, left]
+               | Exp "<" Exp                        [strict, left]
+               | Exp ">=" Exp                       [strict, left]
+               | Exp "<=" Exp                       [strict, left]
+               | "!" Exp                            [strict, left]
+               | Exp "&&" Exp                       [strict(1), left]
+               | Exp "||" Exp                       [strict, left]
                > Exp "==" Exp                       [strict, left]
                | "sleep" "(" Exp ")"                [strict(1)]
                | "new" Id "(" Exps ")"              [strict(2)]
-               | "send" Exp "," Id                  [strict(1), sendExpNoArgs]
-               | "send" Exp "," Id "," "(" Exps ")" [strict(1), sendExp]
-               | "broadcast" Id                     [broadcastExpNoArgs]
-               | "broadcast" Id "," "(" Exps ")"    [strict(2), broadcastExp]
+               | "send" Exp "," Id                  [strict(1)]
+               | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               | "broadcast" Id
+               | "broadcast" Id "," "(" Exps ")"    [strict(2)]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
-               > DeclOrAssgn
                | "print" "(" Exp ")"                [strict]
-               > DeclOrAssgnExp
                | "extern" Id "(" Exps ")"
                | "parseInt" "(" Exp ")"             [strict]
                | "return"
                | "return" Exp                       [strict(1)]
-
-  syntax priorities sendExp broadcastExp sendExpNoArgs broadcastExpNoArgs > exps
-  syntax priorities deref > declOrAssgn > exps
-  syntax priorities plusExp minusExp mulExp divExp gtExp ltExp gteExp lteExp andExp orExp > declOrAssgn > exps
+               > Exp "=" Exp                        [strict(2)]
+               > "var" Id
+               | "vars" Ids
+               | "var" Exp "=" Exp                  [strict(2)]
 
 
   syntax Stmt ::= Exp ";"                                  [strict]
@@ -174,9 +163,8 @@ module MEDIK
 ### Macros
 
 ```k
-  rule vars D1::DeclOrAssgn, D2::DeclOrAssgn, Ds::DeclOrAssgns;
-    => var D1 ;  vars D2, Ds;                                   [macro-rec]
-  rule vars D::DeclOrAssgn , .DeclOrAssgns ; => var D;          [macro]
+  rule vars I1:Id, I2:Id, Is:Ids; => var I1; vars I2, Is;       [macro-rec]
+  rule vars I, .Ids; => var I;                                  [macro]
   rule var I:Id = E:Exp ; => var I; I = E;                      [macro]
   rule entry B:Block => entry (.Ids) B                          [macro]
   rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
@@ -244,16 +232,16 @@ module MEDIK
 
   rule createDeclarationCode(_, _) => . [owise]
 
-  rule <k> createDeclarationCode(Name, E::DeclOrAssgnExp ;) => . ... </k>
+  rule <k> createDeclarationCode(Name, (var _ ;) #as S2) => . ... </k>
        <machine>
         <machineName> Name </machineName>
-        <declarationCode> S:Stmt => { S E; }:>Stmt </declarationCode> ...
+        <declarationCode> S1:Stmt => { S1 S2 }:>Stmt </declarationCode> ...
        </machine>
 
-  rule <k> createDeclarationCode(Name, E1:Exp = E2:Exp ;) => . ... </k>
+  rule <k> createDeclarationCode(Name, (_ = _ ;) #as S2) => . ... </k>
        <machine>
         <machineName> Name </machineName>
-        <declarationCode> S:Stmt => { S E1 = E2 ; }:>Stmt </declarationCode> ...
+        <declarationCode> S1:Stmt => { S1 S2 }:>Stmt </declarationCode> ...
        </machine>
 
   rule createTransitionSystem(MName, S Ss)
@@ -293,12 +281,22 @@ module MEDIK
   rule createStateDeclarations(MName, SName, S Ss)
     => createStateDeclarations(MName, SName, S) ~> createStateDeclarations(MName, SName, Ss)
 
-  rule <k> createStateDeclarations(MName, SName, E::DeclOrAssgnExp ;) => . ... </k>
+  rule <k> createStateDeclarations(MName, SName, (var _:Id ;) #as S2:Stmt) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
           <stateName> SName </stateName>
-          <stateDeclarations> S:Stmt => S E; </stateDeclarations> ...
+          <stateDeclarations> S1:Stmt => {S1 S2}:>Stmt </stateDeclarations> ...
+        </state> ...
+      </machine>
+
+
+  rule <k> createStateDeclarations(MName, SName, (_ = _ ;) #as S2:Stmt) => . ... </k>
+       <machine>
+        <machineName> MName </machineName>
+        <state>
+          <stateName> SName </stateName>
+          <stateDeclarations> S1:Stmt => {S1 S2}:>Stmt </stateDeclarations> ...
         </state> ...
       </machine>
 
