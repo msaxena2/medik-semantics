@@ -71,6 +71,10 @@ $(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 # -----
 
 TEST_LLVM_FILES := $(wildcard tests/*.medik)
+
+# Path for the external python script
+SCRIPT_PATH = $(CURDIR)/test-extern
+
 tests-llvm: $(patsubst tests/%.medik, tests/%.medik.run, $(TEST_LLVM_FILES))
 
 COMPARE := git --no-pager diff --no-index --ignore-all-space -R
@@ -80,7 +84,7 @@ GREEN := \033[0;32m
 RESET := \033[0m
 tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-35s %s' "$< " "... "
-	@krun --output none -d $(LLVM_KOMPILED_DIR) $< | cat /dev/stdin > $@
+	@krun --output none -cSCRIPT_PATH=\"$(SCRIPT_PATH)\" -d $(LLVM_KOMPILED_DIR) $< | cat /dev/stdin > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 

@@ -52,9 +52,9 @@ module MEDIK-SYNTAX
                > Exp "==" Exp                       [strict, left]
                | "sleep" "(" Exp ")"                [strict(1)]
                | "new" Id "(" Exps ")"              [strict(2)]
-               | "send" Exp "," Id                  [strict(1)]
+               | "send" Exp "," Id                  [strict(1), sendExpNoArgs]
                | "send" Exp "," Id "," "(" Exps ")" [strict(1), sendExp]
-               | "broadcast" Id
+               | "broadcast" Id                     [broadcastExpNoArgs]
                | "broadcast" Id "," "(" Exps ")"    [strict(2), broadcastExp]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
@@ -66,7 +66,7 @@ module MEDIK-SYNTAX
                | "return"
                | "return" Exp                       [strict(1)]
 
-  syntax priorities sendExp broadcastExp > exps
+  syntax priorities sendExp broadcastExp sendExpNoArgs broadcastExpNoArgs > exps
   syntax priorities deref > declOrAssgn > exps
   syntax priorities plusExp minusExp mulExp divExp gtExp ltExp gteExp lteExp andExp orExp > declOrAssgn > exps
 
@@ -169,6 +169,7 @@ module MEDIK
                 <timeoutEvents> .Set </timeoutEvents>
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
+                <externScript> $SCRIPT_PATH:String </externScript>
 ```
 ### Macros
 
@@ -816,11 +817,12 @@ it is unblocked before the switch occurs.
     =>   #mkstemp("externXXXXXX")
       ~> doWriteAndCall(JSON2String(Exp2JSON(Name(Args))))
 
-  rule #tempFile(FName, FD) ~> doWriteAndCall(S)
+  rule <k> #tempFile(FName, FD) ~> doWriteAndCall(S)
     =>   #write(FD, S)
       ~> #close(FD)
-      ~> #system("./middleware " +String FName)
-      ~> processCallResult
+      ~> #system(SCRIPT +String " "  +String FName)
+      ~> processCallResult ... </k>
+       <externScript> SCRIPT </externScript>
 
   rule #systemResult(0, StdOut, _) ~> processCallResult
     => result2Obj(#parseKORE(StdOut))
