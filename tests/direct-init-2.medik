@@ -1,0 +1,18 @@
+machine DirectInitB {
+  var directInit = 2;
+}
+
+machine DirectInitA {
+  var directInitB = new DirectInitB();
+  var directInit = directInitB.directInit - 1;
+}
+
+init machine Test {
+  init state Start {
+    entry {
+      // should print 1
+      print((new DirectInitA()).directInit);
+    }
+  }
+}
+

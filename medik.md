@@ -60,7 +60,7 @@ module MEDIK-SYNTAX
                | "goto" Id "(" Exps ")"             [strict(2)]
                > DeclOrAssgn
                | "print" "(" Exp ")"                [strict]
-               | DeclOrAssgnExp
+               > DeclOrAssgnExp
                | "extern" Id "(" Exps ")"
                | "parseInt" "(" Exp ")"             [strict]
                | "return"
@@ -495,6 +495,28 @@ module MEDIK
           <isInitState> true </isInitState> ...
         </state> ...
        </machine>
+
+  // Default constructor/state if no init state present
+  syntax Id ::= "$Default"
+
+  rule  <id> SourceId </id>
+        <k> new MName ( .Vals ) => wait ... </k>
+        ( .Bag => <instance>
+                    <id> Loc </id>
+                    <k> asGlobalDecls(MachineDecls)
+                     ~> unblockCaller
+                     ~> execEventHandlers </k>
+                    <class> MName </class>
+                    <activeState> $Default </activeState>
+                    <callerId> SourceId </callerId> ...
+                   </instance> )
+       <nextLoc> Loc => Loc +Int 1 </nextLoc>
+       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
+       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
+       <machine>
+        <machineName> MName </machineName>
+        <declarationCode> MachineDecls </declarationCode> ...
+       </machine>                                                       [owise]
 
   rule asGlobalDecls(S:Stmt Ss:Stmt)
     => asGlobalDecls(S) ~> asGlobalDecls(Ss)
