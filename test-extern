@@ -29,11 +29,20 @@ def success_json(payload):
 def echo(arg):
     return success_json(arg)
 
+def _get(name):
+    if name == 'hr':
+        return success_json(72)
+    if name == 'bp':
+        return success_json(120)
+    return None
+
 # Dispatcher for middleware methods
 def handle_input(in_json):
     match in_json['name']:
         case 'echo':
             pretty_out = echo(*in_json['args'])
+        case '_get':
+            pretty_out = _get(*in_json['args'])
         case _:
             raise MethodNotPresentError('Specified method not found')
 

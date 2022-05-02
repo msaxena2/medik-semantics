@@ -1,0 +1,16 @@
+machine A {
+  var hr = get;
+  var bp = get;
+}
+
+init machine B {
+  init state Start {
+    entry {
+      var a = new A();
+      // should print 72
+      print(a.hr + "\n");
+      // shold print 120
+      print(a.bp + "\n");
+    }
+  }
+}

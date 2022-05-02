@@ -26,6 +26,7 @@ module MEDIK-SYNTAX
                | String
                | UndefExp
                | ThisExp
+               | "get"
                | "(" Exp ")"                        [bracket]
                | Id "(" Exps ")"                    [strict(2)]
                > Exp "." Exp                        [strict(1), left]
@@ -731,6 +732,26 @@ it is unblocked before the switch occurs.
 
 ```
 
+#### Semantics of Get
+
+The `get` keyword provides a mechanism in medik to fetch values from an external
+source at runtime. The semantics make a call to a method named `get` in the
+python file provided via the `-cSCRIPT_NAME` flag
+
+```k
+  syntax Bool ::= "isGetExp" "(" Exp ")" [function]
+
+  rule isGetExp(get) => true
+  rule isGetExp(_)   => false [owise]
+
+  context _ = HOLE:Exp
+    requires notBool(isGetExp(HOLE))
+
+  rule     I:Id = get => I     = extern get (Id2String(I))
+  rule E . I:Id = get => E . I = extern get (Id2String(I))
+
+```
+
 #### IPC via extern
 
 ```k
@@ -813,6 +834,10 @@ it is unblocked before the switch occurs.
   rule extern Name:Id ( Args:Vals )
     =>   #mkstemp("externXXXXXX")
       ~> doWriteAndCall(JSON2String(Exp2JSON(Name(Args))))
+
+  rule extern get( Field:String )
+    =>   #mkstemp("externXXXXXX")
+      ~> doWriteAndCall(JSON2String({"name": "_get", "args": [Field]}))
 
   rule <k> #tempFile(FName, FD) ~> doWriteAndCall(S)
     =>   #write(FD, S)
