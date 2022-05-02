@@ -12,7 +12,7 @@ module MEDIK-SYNTAX
 
   syntax Ids ::= List{Id, ","}    [ids]
 
-  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), exps]
+  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), avoid]
   syntax UndefExp ::= "undef"
 
   syntax Val
@@ -45,20 +45,19 @@ module MEDIK-SYNTAX
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
                | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
-               | "broadcast" Id
+               | "broadcast" Id                     [broadcast]
                | "broadcast" Id "," "(" Exps ")"    [strict(2)]
                | "goto" Id
                | "goto" Id "(" Exps ")"             [strict(2)]
                | "print" "(" Exp ")"                [strict]
-               | "extern" Id "(" Exps ")"
+               | "extern" Exp "(" Exps ")"
                | "parseInt" "(" Exp ")"             [strict]
                | "return"
                | "return" Exp                       [strict(1)]
-               > Exp "=" Exp                        [strict(2)]
+               > Exp "=" Exp
                > "var" Id
                | "vars" Ids
-               | "var" Exp "=" Exp                  [strict(2)]
-
+               | "var" Exp "=" Exp
 
   syntax Stmt ::= Exp ";"                                  [strict]
                 | Block
