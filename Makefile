@@ -59,7 +59,6 @@ LLVM_KOMPILE_OPTS := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
                      $(abspath $(CPP_FILES))                     \
 		     -std=c++14 -levent -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
 
-
 $(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 	mkdir -p $(BUILD_DIR)
 	kompile -d $(LLVM_KOMPILED_DIR)				  \
@@ -70,6 +69,8 @@ $(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 # Tests
 # -----
 
+# Regular Medik Tests
+# -------------------
 TEST_LLVM_FILES := $(wildcard tests/*.medik)
 
 # Path for the external python script
@@ -88,6 +89,21 @@ tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/mak
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
+# Sepsis Screening Guideline Tests
+# --------------------------------
+
+SEPSIS_DIR    := tests/sepsis
+SEPSIS_FILE   := $(SEPSIS_DIR)/sepsis-screen.medik
+
+TEST_PYEXTERN_FILES := $(wildcard $(SEPSIS_DIR)/*.extern)
+
+tests-sepsis: $(patsubst $(SEPSIS_DIR)/%.extern, $(SEPSIS_DIR)/%.medik.run, $(TEST_PYEXTERN_FILES))
+
+$(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.extern $(SEPSIS_DIR)/%.medik.expected $(SEPSIS_FILE) $(LLVM_KOMPILED_DIR)/make.timestamp
+	@printf '%-35s %s' "$< " "... "
+	@krun --output none -cSCRIPT_PATH=\"$(CURDIR)/$<\" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE)  | cat /dev/stdin > $@
+	@$(COMPARE) $@ $(word 2, $^)
+	@printf "${GREEN}OK ${RESET}\n"
 
 # Cleaning
 # --------

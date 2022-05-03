@@ -1,0 +1,13 @@
+machine Heart {
+  var hr = get;
+}
+
+init machine Driver {
+  var heart;
+  init state Start {
+    entry {
+      heart = new Heart();
+      print(heart.hr);
+    }
+  }
+}
