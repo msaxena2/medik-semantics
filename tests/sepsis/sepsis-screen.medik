@@ -1,13 +1,88 @@
 machine Heart {
-  var hr = get;
+  var hr           = get;
+  var sysBP        = get;
+  var pulseQuality = get;
+  var capResp      = get;
 }
 
-init machine Driver {
-  var heart;
-  init state Start {
+machine ImmuneSystem {
+  var temp = get;
+}
+
+machine Patient {
+  var heart              = new Heart();
+  var immuneSystem       = new ImmuneSystem();
+  var age                = get;
+  var mentalStatus       = get;
+  var highRiskConditions = get;
+  var skinCondition      = get;
+}
+
+init machine SepsisScreenMachine {
+  var patient;
+
+  fun days(age) {
+    return age;
+  }
+
+  fun years(age) {
+    return 365 * age;
+  }
+
+  fun ageInYears(age) {
+    return age / 365;
+  }
+
+  fun abnormalHeartRate() {
+      days(patient.age) in {
+        interval(days(0), days(60))    : return !(patient.heart.hr in interval(100, 205));
+        interval(days(60), years(1))   : return !(patient.heart.hr in interval(90, 190));
+        interval(years(1), years(2))   : return !(patient.heart.hr in interval(80, 190));
+        interval(years(2), years(4))   : return !(patient.heart.hr in interval(70, 140));
+        interval(years(4), years(10))  : return !(patient.heart.hr in interval(60, 140));
+        interval(years(10), years(13)) : return !(patient.heart.hr in interval(60, 130));
+        default                        : return !(patient.heart.hr in interval(60, 130));
+      }
+  }
+
+  fun abnormalBloodPressure() {
+    days(patient.age) in {
+        interval(days(0), days(28))    : return !(patient.heart.sysBP in interval(60, 180));
+        interval(days(28), years(1))   : return !(patient.heart.sysBP in interval(70, 180));
+        interval(years(1), years(10))  : return !(patient.heart.sysBP in interval(70 + (ageInYears(patient.age) * 2), 180));
+        interval(years(10), years(20)) : return !(patient.heart.sysBP in interval(90, 180));
+        default                        : return !(patient.heart.sysBP in interval(100, 180));
+    }
+  }
+
+  fun abnormalTemp() {
+    days(patient.age) in {
+        interval(days(0), days(60))    : return !(patient.immuneSystem.temp in interval(36, 38));
+        interval(days(60), years(20))  : return !(patient.immuneSystem.temp in interval(36, 38));
+        default                        : return !(patient.immuneSystem.temp in interval(36, 38));
+    }
+  }
+
+  fun abnormalPulseQuality() {
+    return !(patient.heart.pulseQuality == "Normal");
+  }
+
+  fun abnormalMentalStatus {
+    return !(patient.mentalStatus == "Normal");
+  }
+
+  init state SepsisScreen {
     entry {
-      heart = new Heart();
-      print(heart.hr);
+      // Acquire patient stats
+      patient = new Patient();
+
+      var bucket1 = abnormalHeartRate() || abnormalBloodPressure() || abnormalPulseQuality();
+      var bucket2 = abnormalTemp();
+      var bucket3 = abnormalMentalStatus();
+
+      if (bucket1 || bucket2 || bucket3) {
+        print("Sepsis");
+      }
     }
   }
 }

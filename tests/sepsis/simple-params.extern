@@ -29,12 +29,20 @@ def success_json(payload):
 def echo(arg):
     return success_json(arg)
 
+test_params = {
+        'hr'                 : 72
+      , 'sysBP'              : 100
+      , 'pulseQuality'       : 'Normal'
+      , 'capResp'            : 2
+      , 'temp'               : 36
+      , 'age'                : 60
+      , 'highRiskConditions' : 'No'
+      , 'skinCondition'      : 'Normal'
+      , 'mentalStatus'       : 'Normal'
+}
+
 def _get(name):
-    if name == 'hr':
-        return success_json(72)
-    if name == 'bp':
-        return success_json(120)
-    return None
+    return success_json(test_params[name])
 
 # Dispatcher for middleware methods
 def handle_input(in_json):
