@@ -1,0 +1,13 @@
+init machine CaseTest {
+  init state Start {
+    entry {
+      var a = 9;
+      if (a in interval(10, 20)) {
+        print("not ok");
+      } else {
+        print("ok");
+      }
+    }
+  }
+}
+

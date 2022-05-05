@@ -46,6 +46,8 @@ module MEDIK-SYNTAX
                | "new" Id "(" Exps ")"              [strict(2)]
                | "send" Exp "," Id                  [strict(1)]
                | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               | Exp "in" Exp
+               | "interval" "(" Exp "," Exp ")"     [strict]
                | "broadcast" Id                     [broadcast]
                | "broadcast" Id "," "(" Exps ")"    [strict(2)]
                | "goto" Id
@@ -70,6 +72,7 @@ module MEDIK-SYNTAX
                 | "on" Id "do" Block
                 | "on" Id "(" Ids ")" "do" Block
                 | "fun" Id "(" Ids ")" Block
+                | Exp "in" "{" CaseDecl "}"
                 | StateDecl
                 > "machine" Id Block
                 | "machine" Id "receives" Ids Block
@@ -79,6 +82,10 @@ module MEDIK-SYNTAX
 
   syntax StateDecl ::= "state" Id Block
                      | "init" "state" Id Block
+
+  syntax CaseDecl ::= Exp ":" Stmt
+                    | CaseDecl "default" ":" Stmt
+                    > CaseDecl CaseDecl                    [right]
 
   syntax Block ::= "{" "}"
                  | "{" Stmt "}"
@@ -177,6 +184,14 @@ module MEDIK
   rule broadcast Event => broadcast Event, ( .Vals )            [macro]
   rule while (Cond) Block
    => if (Cond) { Block while (Cond) Block }                    [structural]
+  rule E in interval(L, R) => (E >= L) && (E < R)               [macro]
+  rule E in { interval(L, U): S:Stmt Cs:CaseDecl }
+    => if (E in interval(L, U)) { S } else { E in { Cs } }      [macro-rec]
+  rule E in { interval(L, U): S:Stmt }
+    => if (E in interval(L, U)) { S }                           [macro]
+  rule E in { interval(L, U): S1:Stmt default: S2:Stmt }
+    => if (E in interval(L, U)) { S1 } else { S2 }              [macro]
+
 ```
 
 ### Machine Template Creation

@@ -1,0 +1,12 @@
+init machine MatchTest {
+  init state Start {
+    entry {
+      var a = 0;
+      a in {
+        interval(10, 20): print("not ok");
+        interval(20, 30): print("not ok");
+        default         : print("ok");
+      }
+    }
+  }
+}
