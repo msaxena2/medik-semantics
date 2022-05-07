@@ -439,6 +439,10 @@ module MEDIK
   rule S1       + S2       => S1 +String S2
   rule S:String + I:Int    => S +String Int2String(I)
   rule I:Int    + S:String => Int2String(I) +String S
+  rule S:String + true     => S +String "true"
+  rule S:String + false    => S +String "false"
+  rule true     + S:String => "true" +String S
+  rule false    + S:String => "false" +String S
 ```
 
 #### Blocks
@@ -708,6 +712,12 @@ it is unblocked before the switch occurs.
 
   rule <k> print(undef) => undef ... </k>
        <output> ... (.List => ListItem("undef")) </output>
+
+  rule <k> print(true) => . ... </k>
+       <output> ... (.List => ListItem("true")) </output>
+
+  rule <k> print(false) => . ... </k>
+       <output> ... (.List => ListItem("false")) </output>
 ```
 
 #### If/While
