@@ -27,6 +27,7 @@ module MEDIK-SYNTAX
                | UndefExp
                | ThisExp
                | "get"
+               | "yield"
                | "(" Exp ")"                        [bracket]
                | Id "(" Exps ")"                    [strict(2)]
                > Exp "." Exp                        [strict(1), left]
@@ -549,6 +550,8 @@ module MEDIK
 
   rule <k> unblockCaller => . ... </k>
        <callerId> . </callerId>
+
+  rule yield => unblockCaller ~> nothing
 
   rule <k> execEntryCode(SName, Vals)
         =>   recordEnv
