@@ -1,12 +1,47 @@
-machine Heart {
-  var hr           = get;
-  var sysBP        = get;
-  var pulseQuality = get;
-  var capResp      = get;
+machine Heart receives stopEvent {
+  vars hr, sysBP, pulseQuality, capillaryRefill;
+
+  init state ObtainHeartVitals {
+    entry() {
+      hr              = get;
+      sysBP           = get;
+      pulseQuality    = get;
+      capillaryRefill = get;
+
+      broadcast HeartMachineUpdate;
+      send this, updateHeartMachine;
+    }
+
+    on updateHeartMachine do {
+      sleep(2);
+      goto ObtainHeartVitals;
+    }
+
+    on stopEvent do {
+      stop;
+    }
+  }
 }
 
-machine ImmuneSystem {
-  var temp = get;
+machine ImmuneSystem receives stopEvent {
+  var temp;
+  init state ObtainImmuneSystemVitals {
+    entry {
+      temp = get;
+
+      broadcast ImmuneSystemUpdate;
+      send this, updateImmuneSystem;
+    }
+
+    on updateImmuneSystem do {
+      sleep(2);
+      goto ObtainImmuneSystemVitals;
+    }
+
+    on stopEvent do {
+      stop;
+    }
+  }
 }
 
 machine Patient {
@@ -67,21 +102,45 @@ init machine SepsisScreenMachine {
     return !(patient.heart.pulseQuality == "Normal");
   }
 
-  fun abnormalMentalStatus {
+  fun abnormalMentalStatus() {
     return !(patient.mentalStatus == "Normal");
   }
 
-  init state SepsisScreen {
+  fun abnormalCapillaryRefill() {
+    return !((patient.heart.capillaryRefill == "1") || (patient.heart.capillaryRefill == "2"));
+  }
+
+  fun abnormalSkinColor() {
+    return (patient.skinCondition == "Gray") || (patient.skinCondition == "Gray and motted");
+  }
+
+  fun highRiskConditions() {
+    return !(patient.highRiskConditions == 0);
+  }
+
+  init state ObtainVitals {
     entry {
-      // Acquire patient stats
       patient = new Patient();
+      goto SepsisScreen;
+    }
+  }
+
+  state SepsisScreen {
+    entry {
 
       var bucket1 = abnormalHeartRate() || abnormalBloodPressure() || abnormalPulseQuality();
+
       var bucket2 = abnormalTemp();
-      var bucket3 = abnormalMentalStatus();
+
+      var perfusion = abnormalCapillaryRefill() || abnormalSkinColor();
+      var bucket3   = abnormalMentalStatus()    || perfusion || highRiskConditions();
 
       if (bucket1 || bucket2 || bucket3) {
-        print("Sepsis");
+        print("Sepsis suspected\n");
+        broadcast stopEvent;
+      } else {
+        print("Continue triage\n");
+        broadcast stopEvent;
       }
     }
   }
