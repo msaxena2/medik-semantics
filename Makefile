@@ -103,7 +103,7 @@ tests-sepsis: $(patsubst $(SEPSIS_DIR)/%.in.json, $(SEPSIS_DIR)/%.medik.run, $(T
 
 $(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.in.json $(SEPSIS_DIR)/%.medik.expected $(SEPSIS_FILE) $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-35s %s' "$< " "... "
-	krun --output none -cSCRIPT_PATH="\"$(TEST_RUNNER_SCRIPT) $<\"" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE) > $@
+	@krun --output none -cSCRIPT_PATH="\"$(TEST_RUNNER_SCRIPT) $<\"" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE) > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
