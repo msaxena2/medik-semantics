@@ -1,0 +1,85 @@
+#!/usr/bin/env python3.10
+
+from pathlib import Path
+from argparse import ArgumentParser
+import subprocess, os, sys, json, tempfile, requests, json
+
+
+base_dir     = Path(__file__).parents[0] / '..'     / '..'
+kompiled_dir = base_dir                  / '.build' / 'medik-kompiled'
+krelease_dir = base_dir                  / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
+kbin_dir     = krelease_dir              / 'bin'
+
+class ImproperInvocationError(Exception):
+    pass
+
+class MethodNotPresentError(Exception):
+    pass
+
+
+def set_env():
+    path_entires = [ kbin_dir ]
+    os.environ['PATH'] = str(kbin_dir.resolve()) \
+                            + os.pathsep + os.environ['PATH']
+
+def success_json(payload):
+    return { 'result': payload }
+
+# Function in middleware acessible to medik programs
+def echo(arg):
+    return success_json(arg)
+
+frontend_url = 'http://localhost:5000/get_values'
+threshold = 10000
+
+def _get(name):
+    tries = 0
+    while tries < threshold:
+        tries = tries + 1
+        frontend_response = requests.get(frontend_url, params={'field_name': name})
+        if frontend_response.json()["status"] == "ok":
+            print('got: {}: {}'.format(name, frontend_response.json()[name]))
+            return success_json(frontend_response.json()[name])
+
+
+# Dispatcher for middleware methods
+def handle_input(in_json):
+    match in_json['name']:
+        case 'echo':
+            pretty_out = echo(*in_json['args'])
+        case '_get':
+            pretty_out = _get(*in_json['args'])
+        case _:
+            raise MethodNotPresentError('Specified method not found')
+
+    fd, fp = tempfile.mkstemp()
+    try:
+        with os.fdopen(fd, 'w') as tp:
+            tp.write(json.dumps(pretty_out, separators=(',', ':')))
+            tp.flush()
+            kast_out = subprocess.run(['kast' \
+                                      , '-d' \
+                                      , str(kompiled_dir.resolve()) \
+                                      , '-m', 'JSON' \
+                                      , '-s', 'JSON' \
+                                      , '-o', 'KORE' \
+                                      , fp], stdout=subprocess.PIPE)
+            print(kast_out.stdout.decode('UTF-8'))
+    except subprocess.CalledProcessError as err:
+        print(err)
+        exit(1)
+    finally:
+        os.remove(fp)
+
+def main():
+    if len(sys.argv) != 2:
+        raise ImproperInvocationError('Incorrect number of args in CLI Invocation')
+
+    with open(sys.argv[1], 'r') as in_file:
+        in_json = json.loads(in_file.read())
+
+    handle_input(in_json)
+
+if __name__ == "__main__":
+    main()
+
