@@ -1,0 +1,11 @@
+{
+        "hr"                 : 100
+      , "sysBP"              : 40
+      , "pulseQuality"       : "Normal"
+      , "capillaryRefill"    : "2"
+      , "temp"               : 36
+      , "age"                : 60
+      , "highRiskConditions" : 1
+      , "skinCondition"      : "Normal"
+      , "mentalStatus"       : "Normal"
+}
