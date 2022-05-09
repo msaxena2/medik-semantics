@@ -29,28 +29,17 @@ def success_json(payload):
 def echo(arg):
     return success_json(arg)
 
-test_params = {
-        'hr'                 : 72
-      , 'sysBP'              : 100
-      , 'pulseQuality'       : 'Normal'
-      , 'capResp'            : 2
-      , 'temp'               : 36
-      , 'age'                : 60
-      , 'highRiskConditions' : 'No'
-      , 'skinCondition'      : 'Normal'
-      , 'mentalStatus'       : 'Normal'
-}
 
-def _get(name):
-    return success_json(test_params[name])
+def _get(params, name):
+    return success_json(params[name])
 
 # Dispatcher for middleware methods
-def handle_input(in_json):
+def handle_input(params, in_json):
     match in_json['name']:
         case 'echo':
             pretty_out = echo(*in_json['args'])
         case '_get':
-            pretty_out = _get(*in_json['args'])
+            pretty_out = _get(params, *in_json['args'])
         case _:
             raise MethodNotPresentError('Specified method not found')
 
@@ -74,13 +63,16 @@ def handle_input(in_json):
         os.remove(fp)
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         raise ImproperInvocationError('Incorrect number of args in CLI Invocation')
 
-    with open(sys.argv[1], 'r') as in_file:
+    with open(sys.argv[1], 'r') as json_data:
+        params = json.loads(json_data.read())
+
+    with open(sys.argv[2], 'r') as in_file:
         in_json = json.loads(in_file.read())
 
-    handle_input(in_json)
+    handle_input(params, in_json)
 
 if __name__ == "__main__":
     main()

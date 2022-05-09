@@ -92,16 +92,18 @@ tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/mak
 # Sepsis Screening Guideline Tests
 # --------------------------------
 
-SEPSIS_DIR    := tests/sepsis
-SEPSIS_FILE   := $(SEPSIS_DIR)/sepsis-screen.medik
+SEPSIS_DIR  := tests/sepsis
+SEPSIS_FILE := $(SEPSIS_DIR)/sepsis-screen.medik
 
-TEST_PYEXTERN_FILES := $(wildcard $(SEPSIS_DIR)/*.extern)
+TEST_EXTERN_INPUT  := $(wildcard $(SEPSIS_DIR)/*.in.json)
+TEST_RUNNER_SCRIPT := $(CURDIR)/$(SEPSIS_DIR)/sepsis-extern
 
-tests-sepsis: $(patsubst $(SEPSIS_DIR)/%.extern, $(SEPSIS_DIR)/%.medik.run, $(TEST_PYEXTERN_FILES))
 
-$(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.extern $(SEPSIS_DIR)/%.medik.expected $(SEPSIS_FILE) $(LLVM_KOMPILED_DIR)/make.timestamp
+tests-sepsis: $(patsubst $(SEPSIS_DIR)/%.in.json, $(SEPSIS_DIR)/%.medik.run, $(TEST_EXTERN_INPUT))
+
+$(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.in.json $(SEPSIS_DIR)/%.medik.expected $(SEPSIS_FILE) $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-35s %s' "$< " "... "
-	@krun --output none -cSCRIPT_PATH=\"$(CURDIR)/$<\" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE)  | cat /dev/stdin > $@
+	krun --output none -cSCRIPT_PATH="\"$(TEST_RUNNER_SCRIPT) $<\"" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE) > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
