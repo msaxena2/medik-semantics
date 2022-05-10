@@ -1,0 +1,10 @@
+init machine InstructTest {
+  init state Test {
+    entry {
+      var status = instruct("Test instruction");
+      // extern script echoes input
+      print(status);
+    }
+  }
+}
+
