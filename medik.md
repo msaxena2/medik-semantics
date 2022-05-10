@@ -29,6 +29,7 @@ module MEDIK-SYNTAX
                | "get"
                | "yield"
                | "(" Exp ")"                        [bracket]
+               | "instruct" "(" Exp ")"             [strict]
                | Id "(" Exps ")"                    [strict(2)]
                > Exp "." Exp                        [strict(1), left]
                > Exp "+" Exp                        [strict, left]
@@ -780,6 +781,16 @@ python file provided via the `-cSCRIPT_NAME` flag
 
 ```
 
+#### Semantics of Instruct
+
+The `instruct` keyword simply sends a message to an external source at runtime
+
+```k
+  syntax Exp ::= "instruct"
+
+  rule instruct(Msg:String) => extern instruct (Msg)
+```
+
 #### IPC via extern
 
 ```k
@@ -866,6 +877,10 @@ python file provided via the `-cSCRIPT_NAME` flag
   rule extern get( Field:String )
     =>   #mkstemp("externXXXXXX")
       ~> doWriteAndCall(JSON2String({"name": "_get", "args": [Field]}))
+
+  rule extern instruct( Msg:String )
+    =>   #mkstemp("externXXXXXX")
+      ~> doWriteAndCall(JSON2String({"name": "_instruct", "args": [Msg]}))
 
   rule <k> #tempFile(FName, FD) ~> doWriteAndCall(S)
     =>   #write(FD, S)
