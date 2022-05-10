@@ -38,7 +38,6 @@ def _get(name):
         tries = tries + 1
         frontend_response = requests.get(frontend_url, params={'field_name': name})
         if frontend_response.json()["status"] == "ok":
-            print('got: {}: {}'.format(name, frontend_response.json()[name]))
             return success_json(frontend_response.json()[name])
 
 
