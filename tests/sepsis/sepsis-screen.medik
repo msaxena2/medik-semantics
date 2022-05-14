@@ -54,7 +54,7 @@ machine Patient {
 }
 
 init machine SepsisScreenMachine {
-  var patient;
+  vars patient, age;
 
   fun days(age) {
     return age;
@@ -118,7 +118,16 @@ init machine SepsisScreenMachine {
     return !(patient.highRiskConditions == 0);
   }
 
-  init state ObtainVitals {
+  init state ObtainAge {
+    entry {
+      instruct("Obtain patient age");
+      age = get;
+      print("Got age: " + age + "\n");
+      goto ObtainVitals;
+    }
+  }
+
+  state ObtainVitals {
     entry {
       patient = new Patient();
       goto SepsisScreen;
@@ -127,11 +136,6 @@ init machine SepsisScreenMachine {
 
   state SepsisScreen {
     entry {
-      print("Heart Rate: " + patient.heart.hr + "\n");
-      print("SysBP: " + patient.heart.sysBP + "\n");
-      print("Pulse Quality: " + patient.heart.pulseQuality + "\n");
-      print("Age: " + patient.age + "\n");
-      print("Mental status: " + patient.mentalStatus + "\n");
       var bucket1 = abnormalHeartRate() || abnormalBloodPressure() || abnormalPulseQuality();
 
       var bucket2 = abnormalTemp();
@@ -140,12 +144,14 @@ init machine SepsisScreenMachine {
       var bucket3   = abnormalMentalStatus()    || perfusion || highRiskConditions();
 
       if (bucket1 || bucket2 || bucket3) {
-        print("Sepsis suspected\n");
-        broadcast stopEvent;
+        print("Sepsis suspected \n");
+        instruct("Perform sepsis management\n");
       } else {
-        print("Continue triage\n");
-        broadcast stopEvent;
+        print("Continue regular triage\n");
+        instruct("Continue regular triage");
       }
+
+      broadcast stopEvent;
     }
   }
 }

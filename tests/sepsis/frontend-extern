@@ -29,14 +29,23 @@ def success_json(payload):
 def echo(arg):
     return success_json(arg)
 
-frontend_url = 'http://localhost:5000/get_values'
+frontend_url = 'http://localhost:5000'
 threshold = 10000
+
+def _instruct(message):
+    tries = 0
+    while tries < threshold:
+        tries = tries + 1
+        frontend_response = requests.post(frontend_url + '/instruct', json={'message': message})
+        if frontend_response.json()["status"] == "ok":
+            return success_json(None)
+
 
 def _get(name):
     tries = 0
     while tries < threshold:
         tries = tries + 1
-        frontend_response = requests.get(frontend_url, params={'field_name': name})
+        frontend_response = requests.get(frontend_url + '/get_values', params={'field_name': name})
         if frontend_response.json()["status"] == "ok":
             return success_json(frontend_response.json()[name])
 
@@ -48,6 +57,8 @@ def handle_input(in_json):
             pretty_out = echo(*in_json['args'])
         case '_get':
             pretty_out = _get(*in_json['args'])
+        case '_instruct':
+            pretty_out = _instruct(*in_json['args'])
         case _:
             raise MethodNotPresentError('Specified method not found')
 
