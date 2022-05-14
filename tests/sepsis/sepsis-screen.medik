@@ -103,7 +103,7 @@ init machine SepsisScreenMachine {
   }
 
   fun abnormalMentalStatus() {
-    return !(patient.mentalStatus == "Normal");
+    return !(patient.mentalStatus == "Playing/Appropriate");
   }
 
   fun abnormalCapillaryRefill() {
@@ -127,7 +127,11 @@ init machine SepsisScreenMachine {
 
   state SepsisScreen {
     entry {
-
+      print("Heart Rate: " + patient.heart.hr + "\n");
+      print("SysBP: " + patient.heart.sysBP + "\n");
+      print("Pulse Quality: " + patient.heart.pulseQuality + "\n");
+      print("Age: " + patient.age + "\n");
+      print("Mental status: " + patient.mentalStatus + "\n");
       var bucket1 = abnormalHeartRate() || abnormalBloodPressure() || abnormalPulseQuality();
 
       var bucket2 = abnormalTemp();
