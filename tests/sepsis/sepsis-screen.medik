@@ -47,14 +47,20 @@ machine ImmuneSystem receives stopEvent {
 machine Patient {
   var heart              = new Heart();
   var immuneSystem       = new ImmuneSystem();
-  var age                = obtain;
   var mentalStatus       = obtain;
-  var highRiskConditions = obtain;
   var skinCondition      = obtain;
+  vars age, highRiskConditions;
+
+  init state PatientData {
+    entry(age, highRiskConditions) {
+      this.age                = age;
+      this.highRiskConditions = highRiskConditions;
+    }
+  }
 }
 
 init machine SepsisScreenMachine {
-  vars patient, age;
+  vars patient, age, highRiskConditions;
 
   fun days(age) {
     return age;
@@ -122,14 +128,17 @@ init machine SepsisScreenMachine {
     entry {
       instruct("Obtain patient age");
       age = get;
-      print("Got age: " + age + "\n");
+
+      instruct("Obtain high risk conditions");
+      highRiskConditions = get;
+
       goto ObtainVitals;
     }
   }
 
   state ObtainVitals {
     entry {
-      patient = new Patient();
+      patient = new Patient(age, highRiskConditions);
       goto SepsisScreen;
     }
   }
@@ -145,7 +154,7 @@ init machine SepsisScreenMachine {
 
       if (bucket1 || bucket2 || bucket3) {
         print("Sepsis suspected \n");
-        instruct("Perform sepsis management\n");
+        instruct("Perform sepsis management");
       } else {
         print("Continue regular triage\n");
         instruct("Continue regular triage");
