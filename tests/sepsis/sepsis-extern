@@ -30,7 +30,7 @@ def echo(arg):
     return success_json(arg)
 
 
-def _get(params, name):
+def _obtain(params, name):
     return success_json(params[name])
 
 # Dispatcher for middleware methods
@@ -38,8 +38,8 @@ def handle_input(params, in_json):
     match in_json['name']:
         case 'echo':
             pretty_out = echo(*in_json['args'])
-        case '_get':
-            pretty_out = _get(params, *in_json['args'])
+        case '_obtain':
+            pretty_out = _obtain(params, *in_json['args'])
         case _:
             raise MethodNotPresentError('Specified method not found')
 

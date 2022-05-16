@@ -1,5 +1,6 @@
 machine A {
-  var hr = get;
+  var hr = obtain;
+  var bp = obtain;
 }
 
 init machine B {
@@ -7,7 +8,9 @@ init machine B {
     entry {
       var a = new A();
       // should print 72
-      print(a.hr);
+      print(a.hr + "\n");
+      // shold print 120
+      print(a.bp + "\n");
     }
   }
 }

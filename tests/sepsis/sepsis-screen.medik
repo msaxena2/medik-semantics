@@ -3,10 +3,10 @@ machine Heart receives stopEvent {
 
   init state ObtainHeartVitals {
     entry() {
-      hr              = get;
-      sysBP           = get;
-      pulseQuality    = get;
-      capillaryRefill = get;
+      hr              = obtain;
+      sysBP           = obtain;
+      pulseQuality    = obtain;
+      capillaryRefill = obtain;
 
       broadcast HeartMachineUpdate;
       send this, updateHeartMachine;
@@ -27,7 +27,7 @@ machine ImmuneSystem receives stopEvent {
   var temp;
   init state ObtainImmuneSystemVitals {
     entry {
-      temp = get;
+      temp = obtain;
 
       broadcast ImmuneSystemUpdate;
       send this, updateImmuneSystem;
@@ -47,10 +47,10 @@ machine ImmuneSystem receives stopEvent {
 machine Patient {
   var heart              = new Heart();
   var immuneSystem       = new ImmuneSystem();
-  var age                = get;
-  var mentalStatus       = get;
-  var highRiskConditions = get;
-  var skinCondition      = get;
+  var age                = obtain;
+  var mentalStatus       = obtain;
+  var highRiskConditions = obtain;
+  var skinCondition      = obtain;
 }
 
 init machine SepsisScreenMachine {

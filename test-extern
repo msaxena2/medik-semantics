@@ -29,7 +29,7 @@ def success_json(payload):
 def echo(arg):
     return success_json(arg)
 
-def _get(name):
+def _obtain(name):
     if name == 'hr':
         return success_json(72)
     if name == 'bp':
@@ -45,8 +45,8 @@ def handle_input(in_json):
     match in_json['name']:
         case 'echo':
             pretty_out = echo(*in_json['args'])
-        case '_get':
-            pretty_out = _get(*in_json['args'])
+        case '_obtain':
+            pretty_out = _obtain(*in_json['args'])
         case '_instruct':
             pretty_out = _instruct(*in_json['args'])
         case _:

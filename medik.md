@@ -26,7 +26,7 @@ module MEDIK-SYNTAX
                | String
                | UndefExp
                | ThisExp
-               | "get"
+               | "obtain"
                | "yield"
                | "(" Exp ")"                        [bracket]
                | "instruct" "(" Exp ")"             [strict]
@@ -761,23 +761,23 @@ it is unblocked before the switch occurs.
 
 ```
 
-#### Semantics of Get
+#### Semantics of Obtain
 
-The `get` keyword provides a mechanism in medik to fetch values from an external
-source at runtime. The semantics make a call to a method named `get` in the
+The `obtain` keyword provides a mechanism in medik to fetch values from an external
+source at runtime. The semantics make a call to a method named `obtain` in the
 python file provided via the `-cSCRIPT_NAME` flag
 
 ```k
-  syntax Bool ::= "isGetExp" "(" Exp ")" [function]
+  syntax Bool ::= "isObtainExp" "(" Exp ")" [function]
 
-  rule isGetExp(get) => true
-  rule isGetExp(_)   => false [owise]
+  rule isObtainExp(obtain) => true
+  rule isObtainExp(_)      => false [owise]
 
   context _ = HOLE:Exp
-    requires notBool(isGetExp(HOLE))
+    requires notBool(isObtainExp(HOLE))
 
-  rule     I:Id = get => I     = extern get (Id2String(I))
-  rule E . I:Id = get => E . I = extern get (Id2String(I))
+  rule     I:Id = obtain => I     = extern obtain (Id2String(I))
+  rule E . I:Id = obtain => E . I = extern obtain (Id2String(I))
 
 ```
 
@@ -874,9 +874,9 @@ The `instruct` keyword simply sends a message to an external source at runtime
     =>   #mkstemp("externXXXXXX")
       ~> doWriteAndCall(JSON2String(Exp2JSON(Name(Args))))
 
-  rule extern get( Field:String )
+  rule extern obtain( Field:String )
     =>   #mkstemp("externXXXXXX")
-      ~> doWriteAndCall(JSON2String({"name": "_get", "args": [Field]}))
+      ~> doWriteAndCall(JSON2String({"name": "_obtain", "args": [Field]}))
 
   rule extern instruct( Msg:String )
     =>   #mkstemp("externXXXXXX")
