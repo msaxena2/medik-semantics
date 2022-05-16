@@ -66,8 +66,12 @@ init machine SepsisScreenMachine {
     return age;
   }
 
+  fun months(age) {
+    return age * 30;
+  }
+
   fun years(age) {
-    return 365 * age;
+    return age * 365;
   }
 
   fun ageInYears(age) {
@@ -76,13 +80,15 @@ init machine SepsisScreenMachine {
 
   fun abnormalHeartRate() {
       days(patient.age) in {
-        interval(days(0), days(60))    : return !(patient.heart.hr in interval(100, 205));
-        interval(days(60), years(1))   : return !(patient.heart.hr in interval(90, 190));
-        interval(years(1), years(2))   : return !(patient.heart.hr in interval(80, 190));
-        interval(years(2), years(4))   : return !(patient.heart.hr in interval(70, 140));
-        interval(years(4), years(10))  : return !(patient.heart.hr in interval(60, 140));
-        interval(years(10), years(13)) : return !(patient.heart.hr in interval(60, 130));
-        default                        : return !(patient.heart.hr in interval(60, 130));
+        interval(days(0),    months(1)) : return patient.heart.hr > 205;
+        interval(months(60), months(3)) : return patient.heart.hr > 205;
+        interval(months(3),  years(1))  : return patient.heart.hr > 190;
+        interval(years(1),   years(2))  : return patient.heart.hr > 190;
+        interval(years(2),   years(4))  : return patient.heart.hr > 140;
+        interval(years(4),   years(6))  : return patient.heart.hr > 140;
+        interval(years(6),   years(10)) : return patient.heart.hr > 140;
+        interval(years(10),  years(13)) : return patient.heart.hr > 100;
+        default                         : return patient.heart.hr > 100;
       }
   }
 
@@ -124,13 +130,13 @@ init machine SepsisScreenMachine {
     return !(patient.highRiskConditions == 0);
   }
 
-  init state ObtainAge {
+  init state ObtainAgeAndHighRiskConditions {
     entry {
       instruct("Obtain patient age");
-      age = get;
+      age = obtain;
 
       instruct("Obtain high risk conditions");
-      highRiskConditions = get;
+      highRiskConditions = obtain;
 
       goto ObtainVitals;
     }
