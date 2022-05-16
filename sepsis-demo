@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+trap handler SIGINT
+
+handler() {
+  echo "stopping containers\n"
+  docker container stop frontend
+  kill -9 ${CHROMIUM_ID} ${KID}
+}
+
+
+docker container start frontend
+docker container exec -i -w "/app/PSEPSIS/backend" frontend python3 app.py &
+sleep 0.1
+chromium http://localhost:5000/static/index.html http://localhost:5000/static/index2.html &
+CHROMIUM_ID=$!
+sleep 0.1
+krun -d .build/medik-kompiled tests/sepsis/sepsis-screen.medik -cSCRIPT_PATH=\"./tests/sepsis/frontend-extern\" &
+KID=$!
+wait
