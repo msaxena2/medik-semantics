@@ -28,37 +28,38 @@ module MEDIK-SYNTAX
                | ThisExp
                | "obtain"
                | "yield"
-               | "(" Exp ")"                        [bracket]
-               | "instruct" "(" Exp ")"             [strict]
-               | Id "(" Exps ")"                    [strict(2)]
-               > Exp "." Exp                        [strict(1), left]
-               > Exp "+" Exp                        [strict, left]
-               | Exp "-" Exp                        [strict, left]
-               | Exp "*" Exp                        [strict, left]
-               | Exp "/" Exp                        [strict, left]
-               | Exp ">" Exp                        [strict, left]
-               | Exp "<" Exp                        [strict, left]
-               | Exp ">=" Exp                       [strict, left]
-               | Exp "<=" Exp                       [strict, left]
-               | "!" Exp                            [strict, left]
-               | Exp "&&" Exp                       [strict(1), left]
-               | Exp "||" Exp                       [strict, left]
-               > Exp "==" Exp                       [strict, left]
-               | "sleep" "(" Exp ")"                [strict(1)]
-               | "new" Id "(" Exps ")"              [strict(2)]
-               | "send" Exp "," Id                  [strict(1)]
-               | "send" Exp "," Id "," "(" Exps ")" [strict(1)]
+               | "(" Exp ")"                                 [bracket]
+               | "instruct" "(" Exp ")"                      [strict]
+               | Id "(" Exps ")"                             [strict(2)]
+               > Exp "." Exp                                 [strict(1), left]
+               > Exp "+" Exp                                 [strict, left]
+               | Exp "-" Exp                                 [strict, left]
+               | Exp "*" Exp                                 [strict, left]
+               | Exp "/" Exp                                 [strict, left]
+               | Exp ">" Exp                                 [strict, left]
+               | Exp "<" Exp                                 [strict, left]
+               | Exp ">=" Exp                                [strict, left]
+               | Exp "<=" Exp                                [strict, left]
+               | "!" Exp                                     [strict, left]
+               | Exp "&&" Exp                                [strict(1), left]
+               | Exp "||" Exp                                [strict, left]
+               > Exp "==" Exp                                [strict, left]
+               | "sleep" "(" Exp ")"                         [strict(1)]
+               | "new" Id "(" Exps ")"                       [strict(2)]
+               | "send" Exp "," Id                           [strict(1)]
+               | "send" Exp "," Id "," "(" Exps ")"          [strict(1)]
                | Exp "in" Exp
-               | "interval" "(" Exp "," Exp ")"     [strict]
-               | "broadcast" Id                     [broadcast]
-               | "broadcast" Id "," "(" Exps ")"    [strict(2)]
+               | "interval" "(" Exp "," Exp ")"              [strict]
+               | "broadcast" Id                              [broadcast]
+               | "broadcast" Id "," "(" Exps ")"             [strict(2)]
                | "goto" Id
-               | "goto" Id "(" Exps ")"             [strict(2)]
-               | "print" "(" Exp ")"                [strict]
+               | "goto" Id "(" Exps ")"                      [strict(2)]
+               | "print" "(" Exp ")"                         [strict]
+               | "createFromInterface" "(" Id "," String ")" [strict(2)]
                | "extern" Exp "(" Exps ")"
-               | "parseInt" "(" Exp ")"             [strict]
+               | "parseInt" "(" Exp ")"                      [strict]
                | "return"
-               | "return" Exp                       [strict(1)]
+               | "return" Exp                                [strict(1)]
                > Exp "=" Exp
                > "var" Id
                | "vars" Ids
@@ -129,7 +130,7 @@ module MEDIK
                     <inBuffer> .List </inBuffer>
                     <activeState> . </activeState>
                     <callerId> . </callerId>
-                    <isForeign> false </isForeign>
+                    <foreignId> ""    </foreignId>
                   </instance>
                 </instances>
                 <machines>
@@ -167,7 +168,7 @@ module MEDIK
                 <interfaces>
                   <interface multiplicity="*" type="Map">
                     <interfaceName> . </interfaceName>
-                    <interfaceDeclarations> . </interfaceDeclarations>
+                    <interfaceDeclarations> nothing; </interfaceDeclarations>
                     <interfaceReceiveEvents> . </interfaceReceiveEvents>
                   </interface>
                 </interfaces>
@@ -205,7 +206,9 @@ module MEDIK
     => if (E in interval(L, U)) { S }                           [macro]
   rule E in { interval(L, U): S1:Stmt default: S2:Stmt }
     => if (E in interval(L, U)) { S1 } else { S2 }              [macro]
-
+  rule interface Name:Id Code
+    => interface Name receives .Ids Code                        [macro]
+  rule interface _ receives _ ( { } => { nothing; } )           [macro]
 ```
 
 ### Machine Template Creation
@@ -918,6 +921,33 @@ The `instruct` keyword simply sends a message to an external source at runtime
 
   rule #systemResult(0, StdOut, _) ~> processCallResult
     => result2Obj(#parseKORE(StdOut))
+```
+
+#### Infrastructure for Foreign Machines
+
+MediK programs often need to interact with external agents, like
+GUIs and sensors. These agents are represented as *interfaces* or *foreign
+machines*, i.e. machines with transition systems *external* to the MediK program.
+
+```k
+  rule <id> SourceId </id>
+       <k> createFromInterface( IName, FId ) => wait ... </k>
+       ( .Bag =>  <instance>
+                    <id> Loc </id>
+                    <k> asGlobalDecls(InterfaceDecls) ~> unblockCaller </k>
+                    <class> IName </class>
+                    <activeState> $Default </activeState>
+                    <callerId> SourceId </callerId>
+                    <foreignId> FId </foreignId> ...
+                  </instance> )
+       <nextLoc> Loc => Loc +Int 1 </nextLoc>
+       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
+       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
+       <interface>
+        <interfaceName> IName </interfaceName>
+        <interfaceDeclarations> InterfaceDecls </interfaceDeclarations> ...
+       </interface>
+
 ```
 
 #### Timer Hooks
