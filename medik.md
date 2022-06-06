@@ -78,6 +78,8 @@ module MEDIK-SYNTAX
                 | StateDecl
                 > "machine" Id Block
                 | "machine" Id "receives" Ids Block
+                | "interface" Id Block
+                | "interface" Id "receives" Ids Block
                 | "init" "machine" Id Block
                 | "init" "machine" Id "receives" Ids Block
                 > Stmt Stmt                                [right]
@@ -127,6 +129,7 @@ module MEDIK
                     <inBuffer> .List </inBuffer>
                     <activeState> . </activeState>
                     <callerId> . </callerId>
+                    <isForeign> false </isForeign>
                   </instance>
                 </instances>
                 <machines>
@@ -161,6 +164,13 @@ module MEDIK
                     </functions>
                   </machine>
                 </machines>
+                <interfaces>
+                  <interface multiplicity="*" type="Map">
+                    <interfaceName> . </interfaceName>
+                    <interfaceDeclarations> . </interfaceDeclarations>
+                    <interfaceReceiveEvents> . </interfaceReceiveEvents>
+                  </interface>
+                </interfaces>
                 <activeInstances> ListItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
@@ -168,6 +178,8 @@ module MEDIK
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
                 <externScript> $SCRIPT_PATH:String </externScript>
+                <ForeignInput> $INPUT_PATH:String </ForeignInput>
+                <ForeignOutput> $OUTPUT_PATH:String </ForeignOutput>
 ```
 ### Macros
 
@@ -233,6 +245,15 @@ module MEDIK
                     </machine> ) ...
        </machines>
 
+  rule <k> createMachineTemplates(interface Name receives InEvents { Code })
+        => createDeclarationCode(Name, Code) ... </k>
+       <interfaces>
+         ( .Bag =>  <interface>
+                      <interfaceName> Name </interfaceName>
+                      <interfaceReceiveEvents> asSet(InEvents) </interfaceReceiveEvents> ...
+                    </interface> ) ...
+       </interfaces>
+
   rule createDeclarationCode(Name, S Ss)
     => createDeclarationCode(Name, S) ~> createDeclarationCode(Name, Ss)
 
@@ -246,6 +267,12 @@ module MEDIK
                               </function> ) ...
         </functions> ...
        </machine>
+
+  rule <k> createDeclarationCode(Name, (var _ ;) #as S2 ) => . ... </k>
+       <interface>
+        <interfaceName> Name </interfaceName>
+        <interfaceDeclarations> S1:Stmt => { S1 S2 }:>Stmt </interfaceDeclarations> ...
+       </interface>
 
   rule createDeclarationCode(_, _) => . [owise]
 
