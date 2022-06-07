@@ -695,8 +695,10 @@ it is unblocked before the switch occurs.
        </instance>
        <instance>
         <id> Id </id>
+        <class> CName </class>
         <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer> ...
        </instance>
+       <machineName> CName </machineName>
 
   rule <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
        <id> Id </id>
