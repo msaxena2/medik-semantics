@@ -121,7 +121,7 @@ module MEDIK
   configuration <instances>
                   <instance multiplicity="*" type="Map">
                     <id> 0 </id>
-                    <k> createMachineTemplates($PGM:Stmt) ~> createInitInstance </k>
+                    <k> createMachineTemplates($PGM:Stmt) ~> createInitInstances </k>
                     <env> .Map </env>
                     <genv> .Map </genv>
                     <class> $Main </class>
@@ -179,8 +179,9 @@ module MEDIK
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
                 <externScript> $SCRIPT_PATH:String </externScript>
-                <ForeignInput> $INPUT_PATH:String </ForeignInput>
-                <ForeignOutput> $OUTPUT_PATH:String </ForeignOutput>
+                <foreignInput> $INPUT_PATH:String </foreignInput>
+                <foreignOutput> $OUTPUT_PATH:String </foreignOutput>
+                <foreignInstances> 0 </foreignInstances>
 ```
 ### Macros
 
@@ -221,7 +222,7 @@ module MEDIK
                  | "createStateDeclarations" "(" machineName: Id "," stateName: Id "," code: Stmt ")"
                  | "createEntryBlock"        "(" machineName: Id "," stateName: Id "," code: Stmt ")"
                  | "createInstance"          "(" machineName: Id ")"
-                 | "createInitInstance"
+                 | "createInitInstances"
 
   syntax Set ::= "asSet" "(" Ids ")" [function]
 
@@ -386,11 +387,25 @@ module MEDIK
 
   rule createEventHandlers(_, _, _) => . [owise]
 
-  rule <k> createInitInstance => new InitMName ( .Vals ); </k>
+  syntax KItem ::= "createMainInstance" | "createExternHandlerInstance" | "processExternInput"
+  syntax Id    ::= "$ExternHandler"
+
+  rule createInitInstances => createMainInstance ~> createExternHandlerInstance
+
+  rule <k> createMainInstance => new InitMName ( .Vals ); ... </k>
        <machine>
         <machineName> InitMName </machineName>
         <isInitMachine> true </isInitMachine> ...
        </machine>
+
+  rule <k> createExternHandlerInstance => . ... </k>
+       (.Bag =>  <instance>
+                  <id> Loc </id>
+                  <k> processExternInput </k>
+                  <class> $ExternHandler </class> ...
+                 </instance> )
+       <nextLoc> Loc => Loc +Int 1 </nextLoc>
+       <store> (.Map => (Loc |-> instance(Loc))) ... </store>
 
 ```
 
@@ -949,7 +964,27 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         <interfaceName> IName </interfaceName>
         <interfaceDeclarations> InterfaceDecls </interfaceDeclarations> ...
        </interface>
+       <foreignInstances> Count => Count +Int 1 </foreignInstances>
 
+  syntax KItem ::= "doWriteAndClose" "(" IOInt "|" String "|" Id "|" Id "|" Vals ")"
+
+  rule <k> send instance(Id) , EventName:Id , ( Args ) =>
+           doWriteAndClose(#open(OutputFile) | FId | IName | EventName | Args) ... </k>
+       <instance>
+        <id> Id </id>
+        <class> IName </class>
+        <foreignId> FId </foreignId> ...
+       </instance>
+       <interfaceName> IName </interfaceName>
+       <foreignOutput> OutputFile </foreignOutput>
+
+  rule doWriteAndClose(Fd | FId | IName | EventName | Args)
+    =>   #write(Fd, JSON2String({ "id"        : FId
+                                , "interface" : Exp2JSON(IName)
+                                , "name"      : Exp2JSON(EventName)
+                                , "args"      : [Exps2JSONs(Args)] }))
+      ~> #close(Fd)
+      ~> done
 ```
 
 #### Timer Hooks
