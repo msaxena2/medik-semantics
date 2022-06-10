@@ -1003,10 +1003,14 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        </instance>
        <interfaceName> IName </interfaceName>
 
+  syntax KItem ::= "jsonRead" "(" Int ")"             [function, hook(JSON.read)]
+                 | "jsonWrite" "(" Int "," String ")" [function, hook(JSON.write)]
+
   rule <k> doWrite(JSon)
-        => #write(OutputFd, JSON2String(JSon)) ~> done ...
+        => jsonWrite(OutputFd, JSon) ~> done ...
        </k>
        <foreignOutputFd> OutputFd:Int </foreignOutputFd>
+
 ```
 
 #### Timer Hooks
