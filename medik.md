@@ -115,13 +115,14 @@ module MEDIK
   syntax KResult ::= Val | Vals
 
   syntax KItem ::= "createMachineTemplates" "(" Stmt ")"
+                 | "closeForeignFds"
 
   syntax Id ::= "$Main"
 
   configuration <instances>
                   <instance multiplicity="*" type="Map">
                     <id> 0 </id>
-                    <k> createMachineTemplates($PGM:Stmt) ~> createInitInstances </k>
+                    <k> createMachineTemplates($PGM:Stmt) ~> createInitInstances ~> closeForeignFds </k>
                     <env> .Map </env>
                     <genv> .Map </genv>
                     <class> $Main </class>
@@ -181,7 +182,9 @@ module MEDIK
                 <externScript> $SCRIPT_PATH:String </externScript>
                 <foreignInput> $INPUT_PATH:String </foreignInput>
                 <foreignOutput> $OUTPUT_PATH:String </foreignOutput>
-                <foreignInstances> 0 </foreignInstances>
+                <foreignInputFd> . </foreignInputFd>
+                <foreignOutputFd> . </foreignOutputFd>
+                <foreignInstances> false </foreignInstances>
 ```
 ### Macros
 
@@ -407,6 +410,15 @@ module MEDIK
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
 
+  rule <k> closeForeignFds => #close(Fd) ~> closeForeignFds ... </k>
+       <foreignInputFd> Fd:Int => . </foreignInputFd>
+
+  rule <k> closeForeignFds => #close(Fd) ~> closeForeignFds ... </k>
+       <foreignOutputFd> Fd:Int => . </foreignOutputFd>
+
+  rule <k> closeForeignFds => . ... </k>
+       <foreignInputFd>  . </foreignInputFd>
+       <foreignOutputFd> . </foreignOutputFd>
 ```
 
 ### Expression and Statement
@@ -964,27 +976,37 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         <interfaceName> IName </interfaceName>
         <interfaceDeclarations> InterfaceDecls </interfaceDeclarations> ...
        </interface>
-       <foreignInstances> Count => Count +Int 1 </foreignInstances>
+       <foreignInstances> _ => true </foreignInstances>
 
-  syntax KItem ::= "doWriteAndClose" "(" IOInt "|" String "|" Id "|" Id "|" Vals ")"
 
-  rule <k> send instance(Id) , EventName:Id , ( Args ) =>
-           doWriteAndClose(#open(OutputFile) | FId | IName | EventName | Args) ... </k>
+  syntax KItem ::= "openOutputIfClosed"
+                 | "doWrite" "(" JSON ")"
+
+  rule <k> openOutputIfClosed => . ... </k>
+       <foreignOutput> OutputFilePath </foreignOutput>
+       <foreignOutputFd> . => #open(OutputFilePath) </foreignOutputFd>
+
+  rule <k> openOutputIfClosed => . ... </k>
+       <foreignOutputFd> _:Int </foreignOutputFd>
+
+  rule <k> send instance(Id) , EventName:Id , ( Args )
+        =>    openOutputIfClosed
+           ~> doWrite( { "id"        : FId
+                       , "interface" : Exp2JSON(IName)
+                       , "name"      : Exp2JSON(EventName)
+                       , "args"      : [Exps2JSONs(Args)] }) ...
+       </k>
        <instance>
         <id> Id </id>
         <class> IName </class>
         <foreignId> FId </foreignId> ...
        </instance>
        <interfaceName> IName </interfaceName>
-       <foreignOutput> OutputFile </foreignOutput>
 
-  rule doWriteAndClose(Fd | FId | IName | EventName | Args)
-    =>   #write(Fd, JSON2String({ "id"        : FId
-                                , "interface" : Exp2JSON(IName)
-                                , "name"      : Exp2JSON(EventName)
-                                , "args"      : [Exps2JSONs(Args)] }))
-      ~> #close(Fd)
-      ~> done
+  rule <k> doWrite(JSon)
+        => #write(OutputFd, JSON2String(JSon)) ~> done ...
+       </k>
+       <foreignOutputFd> OutputFd:Int </foreignOutputFd>
 ```
 
 #### Timer Hooks
