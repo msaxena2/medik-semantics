@@ -180,8 +180,8 @@ module MEDIK
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
                 <externScript> $SCRIPT_PATH:String </externScript>
-                <foreignInputFd> . </foreignInputFd>
-                <foreignOutputFd> . </foreignOutputFd>
+                <foreignInputFd> #stdin </foreignInputFd>
+                <foreignOutputFd> #stdout </foreignOutputFd>
                 <foreignInstances> false </foreignInstances>
 ```
 ### Macros
@@ -991,11 +991,11 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   syntax K ::= "jsonWrite" "(" JSON "," Int ")" [function, hook(JSON.write)]
 
-//  rule <k> doWrite(JSon)
-//        => #write(OutputFd, JSON2String(JSon)) ~> done ...
-//       </k>
-//       <foreignOutputFd> OutputFd:Int </foreignOutputFd>
-//
+  rule <k> doWrite(JSon)
+        => jsonWrite(JSon, OutputFd) ~> done ...
+       </k>
+       <foreignOutputFd> OutputFd:Int </foreignOutputFd>
+
 ```
 
 #### Timer Hooks
