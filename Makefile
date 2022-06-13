@@ -7,8 +7,7 @@ K_SUBMODULE      := $(abspath $(DEPS_DIR)/k)
 PLUGIN_SUBMODULE := $(abspath $(DEPS_DIR)/blockchain-k-plugin)
 
 K_RELEASE ?= $(K_SUBMODULE)/k-distribution/target/release/k
-K_BIN     := $(K_RELEASE)/bin
-K_LIB     := $(K_RELEASE)/lib
+K_BIN     := $(K_RELEASE)/bin K_LIB     := $(K_RELEASE)/lib
 export K_RELEASE
 
 PATH := $(K_BIN):$(PATH)
@@ -90,8 +89,8 @@ GREEN := \033[0;32m
 RESET := \033[0m
 tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-35s %s' "$< " "... "
-	@krun --output none -cSCRIPT_PATH=\"$(SCRIPT_PATH)\" -d $(LLVM_KOMPILED_DIR) $< \
-		-cINPUT_PATH=\"tests/$*.in\" -cOUTPUT_PATH=\"/dev/stdout\" > $@
+	@if [ -f tests/$*.in ]; then cat tests/$*.in; else echo; fi | \
+		krun --output none -cSCRIPT_PATH=\"$(SCRIPT_PATH)\" -d $(LLVM_KOMPILED_DIR) $< > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
@@ -109,7 +108,7 @@ tests-sepsis: $(patsubst $(SEPSIS_DIR)/%.in.json, $(SEPSIS_DIR)/%.medik.run, $(T
 
 $(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.in.json $(SEPSIS_DIR)/%.medik.expected $(SEPSIS_FILE) $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-50s %s' "$< " "... "
-	@krun --output none -cSCRIPT_PATH="\"$(TEST_RUNNER_SCRIPT) $<\"" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE) > $@
+	@ krun --output none -cSCRIPT_PATH="\"$(TEST_RUNNER_SCRIPT) $<\"" -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE) > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
