@@ -180,8 +180,8 @@ module MEDIK
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
                 <externScript> $SCRIPT_PATH:String </externScript>
-                <foreignInputFd> . </foreignInputFd>
-                <foreignOutputFd> . </foreignOutputFd>
+                <foreignInputFd> #stdin </foreignInputFd>
+                <foreignOutputFd> #stdout </foreignOutputFd>
                 <foreignInstances> false </foreignInstances>
 ```
 ### Macros
@@ -991,13 +991,22 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   syntax K ::= "jsonWrite" "(" JSON "," Int ")" [function, hook(JSON.write)]
 
-//  rule <k> doWrite(JSon)
-//        => #write(OutputFd, JSON2String(JSon)) ~> done ...
-//       </k>
-//       <foreignOutputFd> OutputFd:Int </foreignOutputFd>
-//
-```
+  rule <k> doWrite(JSon)
+        => jsonWrite(JSon, OutputFd) ~> done ...
+       </k>
+       <foreignOutputFd> OutputFd:Int </foreignOutputFd>
 
+  rule <k> processExternInput =>  jsonRead(InputFd) ~> processExternInput ... </k>
+       <foreignInstances> true </foreignInstances>
+       <foreignInputFd> InputFd </foreignInputFd> [priority(301)]
+
+  rule <k> { "id"        : IId
+           , "action"    : "broadcast"
+           , "eventName" : EName:String
+           , "eventArgs" : [Args] }
+        => broadcast String2Id(EName), (Args) ... </k>
+       <foreignId>  IId </foreignId>
+```
 #### Timer Hooks
 
 A simple hook to make the process wait
