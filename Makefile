@@ -117,5 +117,5 @@ $(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.in.json $(SEPSIS_DIR)/%.medik.expecte
 # --------
 
 clean:
-	rm -rf .build
+	rm -rf .build tests/*.tmp
 

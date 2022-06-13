@@ -984,7 +984,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   rule <k> openOutputIfClosed => . ... </k>
        <foreignOutput> OutputFilePath </foreignOutput>
-       <foreignOutputFd> . => #open(OutputFilePath) </foreignOutputFd>
+       <foreignOutputFd> . => #open(OutputFilePath, "w+") </foreignOutputFd>
 
   rule <k> openOutputIfClosed => . ... </k>
        <foreignOutputFd> _:Int </foreignOutputFd>
@@ -1003,11 +1003,16 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        </instance>
        <interfaceName> IName </interfaceName>
 
-  syntax KItem ::= "jsonRead" "(" Int ")"             [function, hook(JSON.read)]
-                 | "jsonWrite" "(" Int "," String ")" [function, hook(JSON.write)]
+  syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
+  syntax IOJSON ::= IOError | JSON
+
+  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
+                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
+
+  syntax K ::= "jsonWrite" "(" JSON "," Int ")" [function, hook(JSON.write)]
 
   rule <k> doWrite(JSon)
-        => jsonWrite(OutputFd, JSon) ~> done ...
+        => #write(OutputFd, JSON2String(JSon)) ~> done ...
        </k>
        <foreignOutputFd> OutputFd:Int </foreignOutputFd>
 
