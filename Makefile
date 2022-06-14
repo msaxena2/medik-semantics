@@ -90,7 +90,7 @@ RESET := \033[0m
 tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-35s %s' "$< " "... "
 	@if [ -f tests/$*.in ]; then cat tests/$*.in; else echo; fi | \
-		krun --output none -cSCRIPT_PATH=\"$(SCRIPT_PATH)\" -d $(LLVM_KOMPILED_DIR) $< > $@
+		krun --output none -d $(LLVM_KOMPILED_DIR) $< > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 

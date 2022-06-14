@@ -59,7 +59,7 @@ module MEDIK-SYNTAX
                | "parseInt" "(" Exp ")"                      [strict]
                | "return"
                | "return" Exp                                [strict(1)]
-               > Exp "=" Exp
+               > Exp "=" Exp                                 [strict(2)]
                > "var" Id
                | "vars" Ids
                | "var" Exp "=" Exp
