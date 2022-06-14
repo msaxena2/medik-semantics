@@ -991,6 +991,18 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   syntax K ::= "jsonWrite" "(" JSON "," Int ")" [function, hook(JSON.write)]
 
+  syntax Exp  ::= "JSONToExp"   "(" JSON ")"    [function]
+  syntax Exps ::= "JSONsToExps" "(" JSONs ")"   [function]
+
+  rule JSONsToExps(J1:JSON , J2:JSON, Js:JSONs)
+    => JSONToExp(J1) , JSONToExp(J2) ,  JSONsToExps(Js)
+
+  rule JSONsToExps(.JSONs) => .Exps
+
+  rule JSONToExp(I:Int)       => I
+  rule JSONToExp(S:String)    => S
+  rule JSONToExp({ _ } #as J) => constructObj(J)
+
   rule <k> doWrite(JSon)
         => jsonWrite(JSon, OutputFd) ~> done ...
        </k>
@@ -1000,12 +1012,16 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInstances> true </foreignInstances>
        <foreignInputFd> InputFd </foreignInputFd> [priority(301)]
 
-  rule <k> { "id"        : IId
-           , "action"    : "broadcast"
-           , "eventName" : EName:String
-           , "eventArgs" : [Args] }
-        => broadcast String2Id(EName), (Args) ... </k>
-       <foreignId>  IId </foreignId>
+  rule  <instance>
+          <k> ({ "id"        : IId
+              , "action"    : "broadcast"
+              , "eventName" : EName:String
+              , "eventArgs" : [ Args:JSONs ] }
+          => broadcast String2Id(EName), (JSONsToExps(Args))) ~> processExternInput ... </k> ...
+       </instance>
+       <instance>
+        <foreignId> IId </foreignId> ...
+       </instance>
 ```
 #### Timer Hooks
 
@@ -1016,8 +1032,7 @@ A simple hook to make the process wait
 
   syntax Set ::= "#getTimeout"                  [function, hook(TIMER.getTimeout)]
 
-  syntax KItem ::= "#storeSleepTimer"
-                 | "#sleepWait" "(" timerId: Int ")"
+  syntax KItem ::= "#storeSleepTimer" | "#sleepWait" "(" timerId: Int ")"
 
   rule <k> sleep(Duration:Int) => #sleep(Duration) ~> #storeSleepTimer ...</k>
        <pendingTimers> PT => PT +Int 1 </pendingTimers>
