@@ -56,7 +56,6 @@ module MEDIK-SYNTAX
                | "goto" Id "(" Exps ")"                      [strict(2)]
                | "print" "(" Exp ")"                         [strict]
                | "createFromInterface" "(" Id "," String ")" [strict(2)]
-               | "extern" Exp "(" Exps ")"
                | "parseInt" "(" Exp ")"                      [strict]
                | "return"
                | "return" Exp                                [strict(1)]
@@ -179,7 +178,6 @@ module MEDIK
                 <timeoutEvents> .Set </timeoutEvents>
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
-                <externScript> $SCRIPT_PATH:String </externScript>
                 <foreignInputFd> #stdin </foreignInputFd>
                 <foreignOutputFd> #stdout </foreignOutputFd>
                 <foreignInstances> false </foreignInstances>
@@ -807,44 +805,6 @@ it is unblocked before the switch occurs.
        <env> _ => Rho </env>
        <fstack> (ListItem(fstackItem(Rho | Rest)) => .List) ... </fstack>
 
-```
-
-#### Semantics of Obtain
-
-The `obtain` keyword provides a mechanism in medik to fetch values from an external
-source at runtime. The semantics make a call to a method named `obtain` in the
-python file provided via the `-cSCRIPT_NAME` flag
-
-```k
-  syntax Bool ::= "isObtainExp" "(" Exp ")" [function]
-
-  rule isObtainExp(obtain) => true
-  rule isObtainExp(_)      => false [owise]
-
-  context _ = HOLE:Exp
-    requires notBool(isObtainExp(HOLE))
-
-  rule     I:Id = obtain => I     = extern obtain (Id2String(I))
-  rule E . I:Id = obtain => E . I = extern obtain (Id2String(I))
-
-```
-
-#### Semantics of Instruct
-
-The `instruct` keyword simply sends a message to an external source at runtime
-
-```k
-  syntax Exp ::= "instruct"
-
-  rule instruct(Msg:String) => extern instruct (Msg)
-```
-
-#### IPC via extern
-
-```k
-  syntax KItem ::= "doWriteAndCall" "(" String ")"
-                 | "processCallResult"
-
   syntax JSON  ::= "Exp2JSON"   "(" Exp ")"  [function]
   syntax JSONs ::= "Exps2JSONs" "(" Vals ")" [function]
                  | "Obj2JSONs"  "(" Map ")"  [function]
@@ -916,30 +876,8 @@ The `instruct` keyword simply sends a message to an external source at runtime
                   </instance> )
        <nextLoc> Loc:Int => Loc +Int 1 </nextLoc>
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
-
-  context extern _:Id ( HOLE:Exps )
-  rule extern Name:Id ( Args:Vals )
-    =>   #mkstemp("externXXXXXX")
-      ~> doWriteAndCall(JSON2String(Exp2JSON(Name(Args))))
-
-  rule extern obtain( Field:String )
-    =>   #mkstemp("externXXXXXX")
-      ~> doWriteAndCall(JSON2String({"name": "_obtain", "args": [Field]}))
-
-  rule extern instruct( Msg:String )
-    =>   #mkstemp("externXXXXXX")
-      ~> doWriteAndCall(JSON2String({"name": "_instruct", "args": [Msg]}))
-
-  rule <k> #tempFile(FName, FD) ~> doWriteAndCall(S)
-    =>   #write(FD, S)
-      ~> #close(FD)
-      ~> #system(SCRIPT +String " "  +String FName)
-      ~> processCallResult ... </k>
-       <externScript> SCRIPT </externScript>
-
-  rule #systemResult(0, StdOut, _) ~> processCallResult
-    => result2Obj(#parseKORE(StdOut))
 ```
+
 
 #### Infrastructure for Foreign Machines
 
