@@ -991,17 +991,17 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   syntax K ::= "jsonWrite" "(" JSON "," Int ")" [function, hook(JSON.write)]
 
-  syntax Exp  ::= "JSONToExp"   "(" JSON ")"    [function]
-  syntax Exps ::= "JSONsToExps" "(" JSONs ")"   [function]
+  syntax Exp  ::= "JSON2Exp"   "(" JSON ")"    [function]
+  syntax Exps ::= "JSONs2Exps" "(" JSONs ")"   [function]
 
-  rule JSONsToExps(J1:JSON , J2:JSON, Js:JSONs)
-    => JSONToExp(J1) , JSONToExp(J2) ,  JSONsToExps(Js)
+  rule JSONs2Exps(J1:JSON , J2:JSON, Js:JSONs)
+    => JSON2Exp(J1) , JSON2Exp(J2) ,  JSONs2Exps(Js)
 
-  rule JSONsToExps(.JSONs) => .Exps
+  rule JSONs2Exps(.JSONs) => .Exps
 
-  rule JSONToExp(I:Int)       => I
-  rule JSONToExp(S:String)    => S
-  rule JSONToExp({ _ } #as J) => constructObj(J)
+  rule JSON2Exp(I:Int)       => I
+  rule JSON2Exp(S:String)    => S
+  rule JSON2Exp({ _ } #as J) => constructObj(J)
 
   rule <k> doWrite(JSon)
         => jsonWrite(JSon, OutputFd) ~> done ...
