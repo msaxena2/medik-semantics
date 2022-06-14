@@ -1,0 +1,16 @@
+interface ExternalMachine {
+  var hr;
+}
+
+init machine Test receives ExternalMachine_hr_update {
+  var externalMachine;
+  init state Start {
+    entry {
+      externalMachine = createFromInterface(ExternalMachine, "ex1");
+    }
+
+    on ExternalMachine_hr_update do {
+      print(externalMachine.hr);
+    }
+  }
+}

@@ -1013,15 +1013,36 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInputFd> InputFd </foreignInputFd> [priority(301)]
 
   rule  <instance>
-          <k> ({ "id"        : IId
+          <k> ({ "id"       : IId
               , "action"    : "broadcast"
               , "eventName" : EName:String
               , "eventArgs" : [ Args:JSONs ] }
-          => broadcast String2Id(EName), (JSONsToExps(Args))) ~> processExternInput ... </k> ...
+          => broadcast String2Id(EName), (JSONs2Exps(Args))) ~> processExternInput ... </k> ...
        </instance>
        <instance>
         <foreignId> IId </foreignId> ...
        </instance>
+
+  syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
+
+  rule createUpdateStateEvent(IName, FNameStr)
+    => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
+
+  rule  <instance>
+          <k> ({ "id"       : IId
+              , "action"    : "updateField"
+              , "fieldName" : FNameStr:String
+              , "fieldVal"  : NewVal:JSON  }
+          =>    broadcast createUpdateStateEvent(IName, FNameStr))
+             ~> processExternInput ...
+          </k> ...
+       </instance>
+       <instance>
+        <class> IName </class>
+        <foreignId> IId </foreignId>
+        <genv> (String2Id(FNameStr) |-> Loc) ... </genv> ...
+       </instance>
+       <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 ```
 #### Timer Hooks
 
