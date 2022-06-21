@@ -391,7 +391,7 @@ module MEDIK
   syntax KItem ::= "createMainInstance" | "createExternHandlerInstance" | "processExternInput"
   syntax Id    ::= "$ExternHandler"
 
-  rule createInitInstances => createMainInstance ~> createExternHandlerInstance
+  rule createInitInstances => createExternHandlerInstance ~> createMainInstance
 
   rule <k> createMainInstance => new InitMName ( .Vals ); ... </k>
        <machine>
