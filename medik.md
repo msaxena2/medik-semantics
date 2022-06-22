@@ -27,6 +27,7 @@ module MEDIK-SYNTAX
                | UndefExp
                | ThisExp
                | "obtain"
+               | "obtainFrom" "(" Exp ")"
                | "yield"
                | "(" Exp ")"                                 [bracket]
                | "instruct" "(" Exp ")"                      [strict]
@@ -183,6 +184,7 @@ module MEDIK
                 <foreignInputFd> #stdin </foreignInputFd>
                 <foreignOutputFd> #stdout </foreignOutputFd>
                 <foreignInstances> false </foreignInstances>
+                <tidCount> 1 </tidCount>
 ```
 ### Macros
 
@@ -818,8 +820,9 @@ python file provided via the `-cSCRIPT_NAME` flag
 ```k
   syntax Bool ::= "isObtainExp" "(" Exp ")" [function]
 
-  rule isObtainExp(obtain) => true
-  rule isObtainExp(_)      => false [owise]
+  rule isObtainExp(obtain)        => true
+  rule isObtainExp(obtainFrom(_)) => true
+  rule isObtainExp(_)             => false [owise]
 
   context _ = HOLE:Exp
     requires notBool(isObtainExp(HOLE))
@@ -827,6 +830,29 @@ python file provided via the `-cSCRIPT_NAME` flag
   rule     I:Id = obtain => I     = extern obtain (Id2String(I))
   rule E . I:Id = obtain => E . I = extern obtain (Id2String(I))
 
+  syntax KItem ::= "sendObtainMessage"     "(" Exp "|" String ")" [strict(1)]
+                 | "waitForObtainResponse" "(" Exp ")"
+
+  // Todo: Using the "send" construct directly crashes the LLVM backend
+  rule I:Id                  = obtainFrom(E:Exp) => sendObtainMessage(E | Id2String(I)) ~> waitForObtainResponse(I)
+  rule ( _ . I:Id  #as LHS ) = obtainFrom(E:Exp) => sendObtainMessage(E | Id2String(I)) ~> waitForObtainResponse(LHS)
+
+  rule <instance>
+        <k> sendObtainMessage( instance(Id:Int) | FName:String )
+         => doWrite( { "id"        : FId
+                     , "tid"       : TId
+                     , "interface" : Exp2JSON(IName)
+                     , "name"      : "Obtain"
+                     , "args"      : [ FName , .JSONs ] } | TId ) ...
+        </k> ...
+       </instance>
+       <instance>
+        <id> Id </id>
+        <class> IName </class>
+        <foreignId> FId </foreignId> ...
+       </instance>
+       <interfaceName> IName </interfaceName>
+       <tidCount> TId => TId +Int 1 </tidCount>
 ```
 
 #### Semantics of Instruct
@@ -968,13 +994,14 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInstances> _ => true </foreignInstances>
 
 
-  syntax KItem ::=  "doWrite" "(" JSON ")"
+  syntax KItem ::=  "doWrite" "(" JSON "|" Int ")"
 
   rule <k> send instance(Id) , EventName:Id , ( Args )
         => doWrite( { "id"        : FId
+                    , "tid"       : TId
                     , "interface" : Exp2JSON(IName)
                     , "name"      : Exp2JSON(EventName)
-                    , "args"      : [Exps2JSONs(Args)] }) ...
+                    , "args"      : [Exps2JSONs(Args)] } | TId ) ...
        </k>
        <instance>
         <id> Id </id>
@@ -982,6 +1009,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         <foreignId> FId </foreignId> ...
        </instance>
        <interfaceName> IName </interfaceName>
+       <tidCount> TId => TId +Int 1 </tidCount>
 
   syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
   syntax IOJSON ::= IOError | JSON
@@ -1003,8 +1031,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp(S:String)    => S
   rule JSON2Exp({ _ } #as J) => constructObj(J)
 
-  rule <k> doWrite(JSon)
-        => jsonWrite(JSon, OutputFd) ~> done ...
+  rule <k> doWrite(JSon | TId )
+        => jsonWrite(JSon, OutputFd) ~> TId ...
        </k>
        <foreignOutputFd> OutputFd:Int </foreignOutputFd>
 
@@ -1016,7 +1044,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
           <k> ({ "id"       : IId
               , "action"    : "broadcast"
               , "eventName" : EName:String
-              , "eventArgs" : [ Args:JSONs ] }
+              , "eventArgs" : [ Args:JSONs ]
+              , _:JSONs }
           => broadcast String2Id(EName), (JSONs2Exps(Args))) ~> processExternInput ... </k> ...
        </instance>
        <instance>
@@ -1032,7 +1061,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
           <k> ({ "id"       : IId
               , "action"    : "updateField"
               , "fieldName" : FNameStr:String
-              , "fieldVal"  : NewVal:JSON  }
+              , "fieldVal"  : NewVal:JSON
+              , _:JSONs}
           =>    broadcast createUpdateStateEvent(IName, FNameStr))
              ~> processExternInput ...
           </k> ...
@@ -1043,6 +1073,20 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         <genv> (String2Id(FNameStr) |-> Loc) ... </genv> ...
        </instance>
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
+
+  rule  <instance>
+          <k> ({ "tid"       : TId
+               , "id"        : _:String
+               , "result"    : "obtainResponse"
+               , "args"      : Val:JSON
+               , _:JSONs  }
+            => .) ~> processExternInput ...
+          </k> ...
+       </instance>
+       <instance>
+        <k> TId ~> waitForObtainResponse(LHS) => LHS = JSON2Exp(Val) ... </k> ...
+       </instance>
+
 ```
 #### Timer Hooks
 
