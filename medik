@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+from argparse import ArgumentParser
+
+import asyncio, contextlib, os, sys, json, tempfile
+
+
+base_dir     = Path(__file__).parents[0]
+kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
+krelease_dir = base_dir     / 'ext'    / 'k' / 'k-distribution' / 'target' / 'release' / 'k'
+kbin_dir     = krelease_dir / 'bin'
+
+
+def set_env():
+    path_entires = [ kbin_dir ]
+    os.environ['PATH'] = str(kbin_dir.resolve()) \
+                            + os.pathsep + os.environ['PATH']
+
+async def read_stdout(k_process):
+    while True:
+        out = await k_process.stdout.read()
+        if not out:
+            break
+        print('read line - {} '.format(out.decode('utf-8')))
+
+async def write_stdin(k_process, in_file=None):
+    print('running write to stdin task')
+    if in_file != None:
+        with open(in_file) as in_file_obj:
+            in_data = in_file_obj.read()
+
+        print('sending to k {}:'.format(in_data))
+        k_process.stdin.write(in_data.encode('utf-8'))
+        await k_process.stdin.drain()
+        print('send successful')
+
+async def krun(pgm_file, in_file=None):
+    set_env()
+
+    k_command = ( 'krun' , ['-d' , str(kompiled_dir.resolve())
+                           , '-cSCRIPT_PATH="{}"'.format(str(base_dir / 'test-extern'))
+                           , '--output' , 'none'
+                           , pgm_file ])
+
+    k_process = await asyncio.create_subprocess_exec( k_command[0]
+                                                    , *k_command[1]
+                                                    , stdin=asyncio.subprocess.PIPE
+                                                    , stdout=asyncio.subprocess.PIPE )
+
+    #asyncio.create_task(write_stdin(k_process, in_file))
+    await write_stdin(k_process, in_file)
+    print('waiting on k')
+    await read_stdout(k_process)
+
+def main():
+    parser = ArgumentParser(description='MediK Interpreter')
+
+    parser.add_argument('-in', '--in-file'
+                       , help='File with input messages'
+                       , nargs=1
+                       , dest='in_file')
+    parser.add_argument('pgm_file'
+                       , metavar='PGM_FILE'
+                       , help='MediK file to run')
+
+    args = parser.parse_args()
+    if args.in_file != None:
+        asyncio.run(krun(args.pgm_file, args.in_file[0]))
+    else:
+        asyncio.run(krun(args.pgm_file))
+
+if __name__ == "__main__":
+    main()
