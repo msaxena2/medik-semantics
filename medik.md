@@ -756,19 +756,26 @@ it is unblocked before the switch occurs.
 
 ```
 #### Other Operations
+
+##### Print
+
+We treat printing as sending an event to an implicit "tty"
+external machine
 ```k
+
+  syntax JSON ::= "Val2JSON" "(" Val ")" [function]
+
+  rule Val2JSON(I:Int)    => I
+  rule Val2JSON(S:String) => S
+  rule Val2JSON(undef)    => "undef"
+  rule Val2JSON(B:Bool)   => Bool2String(B)
+
   rule <k> print(V:Val) => V ... </k>
-       <output> ... (.List => ListItem(V)) </output>
-    requires V =/=K undef
+       <output> ...
+       (.List => ListItem( JSON2String({ "action" : "print"
+                                       , "args"   : [Val2JSON(V)] })))
+       </output>
 
-  rule <k> print(undef) => undef ... </k>
-       <output> ... (.List => ListItem("undef")) </output>
-
-  rule <k> print(true) => . ... </k>
-       <output> ... (.List => ListItem("true")) </output>
-
-  rule <k> print(false) => . ... </k>
-       <output> ... (.List => ListItem("false")) </output>
 ```
 
 #### If/While
