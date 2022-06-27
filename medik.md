@@ -773,7 +773,7 @@ external machine
   rule <k> print(V:Val) => V ... </k>
        <output> ...
        (.List => ListItem( JSON2String({ "action" : "print"
-                                       , "args"   : [Val2JSON(V)] })))
+                                       , "args"   : [Val2JSON(V)] }) +String "\n"))
        </output>
 
 ```
@@ -1039,9 +1039,11 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp({ _ } #as J) => constructObj(J)
 
   rule <k> doWrite(JSon | TId )
-        => jsonWrite(JSon, OutputFd) ~> TId ...
+        => TId ...
        </k>
-       <foreignOutputFd> OutputFd:Int </foreignOutputFd>
+       <output> ... (.List => ListItem(JSON2String(JSon) +String "\n")) </output>
+
+       //<foreignOutputFd> OutputFd:Int </foreignOutputFd>
 
   rule <k> processExternInput =>  jsonRead(InputFd) ~> processExternInput ... </k>
        <foreignInstances> true </foreignInstances>
