@@ -3,7 +3,7 @@
 from pathlib import Path
 from argparse import ArgumentParser
 
-import asyncio, contextlib, os, sys, json, tempfile
+import asyncio, contextlib, os, sys, json, tempfile, json
 
 
 base_dir     = Path(__file__).parents[0]
@@ -17,23 +17,25 @@ def set_env():
     os.environ['PATH'] = str(kbin_dir.resolve()) \
                             + os.pathsep + os.environ['PATH']
 
-async def read_stdout(k_process):
+async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
     while True:
-        out = await k_process.stdout.read()
+        out = await k_process.stdout.readline()
         if not out:
             break
-        print('read line - {} '.format(out.decode('utf-8')))
+        out_json = json.loads(out)
+        match out_json.get('action'):
+            case 'print':
+                print(*out_json['args'], end='', flush=True)
+            case _:
+                recv_cb(out_json)
 
 async def write_stdin(k_process, in_file=None):
-    print('running write to stdin task')
     if in_file != None:
         with open(in_file) as in_file_obj:
             in_data = in_file_obj.read()
 
-        print('sending to k {}:'.format(in_data))
         k_process.stdin.write(in_data.encode('utf-8'))
         await k_process.stdin.drain()
-        print('send successful')
 
 async def krun(pgm_file, in_file=None):
     set_env()
@@ -43,14 +45,16 @@ async def krun(pgm_file, in_file=None):
                            , '--output' , 'none'
                            , pgm_file ])
 
+    in_pipe = asyncio.subprocess.DEVNULL
+    if in_file != None:
+        in_pipe = asyncio.subprocess.PIPE
+
     k_process = await asyncio.create_subprocess_exec( k_command[0]
                                                     , *k_command[1]
-                                                    , stdin=asyncio.subprocess.PIPE
+                                                    , stdin=in_pipe
                                                     , stdout=asyncio.subprocess.PIPE )
 
-    #asyncio.create_task(write_stdin(k_process, in_file))
     await write_stdin(k_process, in_file)
-    print('waiting on k')
     await read_stdout(k_process)
 
 def main():
