@@ -181,8 +181,6 @@ module MEDIK
                 <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
                 <externScript> $SCRIPT_PATH:String </externScript>
-                <foreignInputFd> #stdin </foreignInputFd>
-                <foreignOutputFd> #stdout </foreignOutputFd>
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
 ```
@@ -1028,8 +1026,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
                   | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
 
-  syntax K ::= "jsonWrite" "(" JSON "," Int ")" [function, hook(JSON.write)]
-
   syntax Exp  ::= "JSON2Exp"   "(" JSON ")"    [function]
   syntax Exps ::= "JSONs2Exps" "(" JSONs ")"   [function]
 
@@ -1047,11 +1043,10 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        </k>
        <output> ... (.List => ListItem(JSON2String(JSon) +String "\n")) </output>
 
-       //<foreignOutputFd> OutputFd:Int </foreignOutputFd>
-
-  rule <k> readExternInput =>  jsonRead(InputFd) ~> processExternInput ~> readExternInput ... </k>
-       <foreignInstances> true </foreignInstances>
-       <foreignInputFd> InputFd </foreignInputFd> [priority(301)]
+  rule <k> readExternInput
+        => jsonRead(#stdin) ~> processExternInput ~> readExternInput ...
+       </k>
+       <foreignInstances> true </foreignInstances>                             [priority(301)]
 
   rule [J:JSON , Js:JSONs] ~> processExternInput
     => J ~> processExternInput ~> [ Js ] ~> processExternInput
