@@ -390,7 +390,11 @@ module MEDIK
 
   rule createEventHandlers(_, _, _) => . [owise]
 
-  syntax KItem ::= "createMainInstance" | "createExternHandlerInstance" | "processExternInput"
+  syntax KItem ::= "createMainInstance"
+                 | "createExternHandlerInstance"
+                 | "readExternInput"
+                 | "processExternInput"
+
   syntax Id    ::= "$ExternHandler"
 
   rule createInitInstances => createExternHandlerInstance ~> createMainInstance
@@ -404,7 +408,7 @@ module MEDIK
   rule <k> createExternHandlerInstance => . ... </k>
        (.Bag =>  <instance>
                   <id> Loc </id>
-                  <k> processExternInput </k>
+                  <k> readExternInput </k>
                   <class> $ExternHandler </class> ...
                  </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
@@ -1045,17 +1049,25 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
        //<foreignOutputFd> OutputFd:Int </foreignOutputFd>
 
-  rule <k> processExternInput =>  jsonRead(InputFd) ~> processExternInput ... </k>
+  rule <k> readExternInput =>  jsonRead(InputFd) ~> processExternInput ~> readExternInput ... </k>
        <foreignInstances> true </foreignInstances>
        <foreignInputFd> InputFd </foreignInputFd> [priority(301)]
 
+  rule [J:JSON , Js:JSONs] ~> processExternInput
+    => J ~> processExternInput ~> [ Js ] ~> processExternInput
+
+  rule [ .JSONs ] ~> processExternInput => .
+
+  rule { "action" : "exit" , _:JSONs } ~> processExternInput ~> _ => .
+
   rule  <instance>
-          <k> ({ "id"       : IId
+          <k> { "id"       : IId
               , "action"    : "broadcast"
               , "eventName" : EName:String
               , "eventArgs" : [ Args:JSONs ]
-              , _:JSONs }
-          => broadcast String2Id(EName), (JSONs2Exps(Args))) ~> processExternInput ... </k> ...
+              , _:JSONs } ~> processExternInput
+          => broadcast String2Id(EName), (JSONs2Exps(Args))  ...
+          </k> ...
        </instance>
        <instance>
         <foreignId> IId </foreignId> ...
@@ -1067,13 +1079,12 @@ machines*, i.e. machines with transition systems *external* to the MediK program
     => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
 
   rule  <instance>
-          <k> ({ "id"       : IId
+          <k> { "id"       : IId
               , "action"    : "updateField"
               , "fieldName" : FNameStr:String
               , "fieldVal"  : NewVal:JSON
-              , _:JSONs}
-          =>    broadcast createUpdateStateEvent(IName, FNameStr))
-             ~> processExternInput ...
+              , _:JSONs } ~> processExternInput
+          =>  broadcast createUpdateStateEvent(IName, FNameStr) ...
           </k> ...
        </instance>
        <instance>
@@ -1084,12 +1095,11 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 
   rule  <instance>
-          <k> ({ "tid"       : TId
-               , "id"        : _:String
-               , "result"    : "obtainResponse"
-               , "args"      : Val:JSON
-               , _:JSONs  }
-            => .) ~> processExternInput ...
+          <k> { "tid"       : TId
+              , "id"        : _:String
+              , "result"    : "obtainResponse"
+              , "args"      : Val:JSON , _:JSONs  } ~> processExternInput
+           => . ...
           </k> ...
        </instance>
        <instance>
