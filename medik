@@ -17,6 +17,16 @@ def set_env():
     os.environ['PATH'] = str(kbin_dir.resolve()) \
                             + os.pathsep + os.environ['PATH']
 
+background_tasks = set()
+
+async def _sleep(k_process, duration, tid):
+    logging.info('sleeping for duration {} for tid {}'.format(duration, tid))
+    await asyncio.sleep(duration)
+    k_process.stdin.write(json.dumps({ 'tid'    : tid
+                                     , 'action' : 'sleepResponse' }).encode('utf-8'))
+    await k_process.stdin.drain()
+    logging.info('sleep complete message sent for tid {}'.format(tid))
+
 async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
     while True:
         logging.info('waiting for k:')
@@ -27,6 +37,12 @@ async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
         match out_json.get('action'):
             case 'print':
                 print(*out_json['args'], end='', flush=True)
+            case 'sleep':
+                sleep_task = asyncio.create_task(_sleep( k_process
+                                                , out_json['duration']
+                                                , out_json['tid']))
+                background_tasks.add(sleep_task)
+                background_tasks.add_done_callback(sleep_task.discard)
             case _:
                 recv_cb(out_json)
 
@@ -62,7 +78,7 @@ async def krun(pgm_file, in_file=None):
 
     k_process = await asyncio.create_subprocess_exec( k_command[0]
                                                     , *k_command[1]
-                                                    , stdin=in_pipe
+                                                    , stdin=asyncio.subprocess.PIPE
                                                     , stdout=asyncio.subprocess.PIPE
                                                     , stderr=asyncio.subprocess.PIPE)
 
