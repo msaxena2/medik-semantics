@@ -41,7 +41,6 @@ async def krun(pgm_file, in_file=None):
     set_env()
 
     k_command = ( 'krun' , ['-d' , str(kompiled_dir.resolve())
-                           , '-cSCRIPT_PATH="{}"'.format(str(base_dir / 'test-extern'))
                            , '--output' , 'none'
                            , pgm_file ])
 
