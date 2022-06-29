@@ -3,7 +3,7 @@
 from pathlib import Path
 from argparse import ArgumentParser
 
-import asyncio, contextlib, os, sys, json, tempfile, json
+import asyncio, contextlib, logging, os, sys, json, tempfile, json
 
 
 base_dir     = Path(__file__).parents[0]
@@ -19,6 +19,7 @@ def set_env():
 
 async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
     while True:
+        logging.info('waiting for k:')
         out = await k_process.stdout.readline()
         if not out:
             break
@@ -34,8 +35,10 @@ async def write_stdin(k_process, in_file=None):
         with open(in_file) as in_file_obj:
             in_data = in_file_obj.read()
 
+        logging.info('sending to k: {}'.format(in_data))
         k_process.stdin.write(in_data.encode('utf-8'))
         await k_process.stdin.drain()
+        logging.info('sending to k complete')
 
 async def krun(pgm_file, in_file=None):
     set_env()
@@ -66,8 +69,15 @@ def main():
     parser.add_argument('pgm_file'
                        , metavar='PGM_FILE'
                        , help='MediK file to run')
+    parser.add_argument('-v', '--verbose'
+                       , help='print verbose logs'
+                       , action='store_const'
+                       , dest='loglevel'
+                       , const=logging.INFO
+                       )
 
     args = parser.parse_args()
+    logging.basicConfig(level=args.loglevel)
     if args.in_file != None:
         asyncio.run(krun(args.pgm_file, args.in_file[0]))
     else:
