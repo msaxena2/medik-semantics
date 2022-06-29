@@ -1,6 +1,7 @@
 [submodule "ext/k"]
 	path = ext/k
 	url = https://github.com/kframework/k.git
+        ignore = untracked
 [submodule "ext/blockchain-k-plugin"]
 	path = ext/blockchain-k-plugin
 	url = https://github.com/runtimeverification/blockchain-k-plugin.git

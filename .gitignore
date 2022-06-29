@@ -1,6 +1,8 @@
 /.kompile*
 /.build
 /tests/**/*.run
+**/make.timestamp
 /extern*
 /.krun*
+/medik-kompiled
 __pycache__
