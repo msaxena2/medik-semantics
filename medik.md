@@ -1088,8 +1088,14 @@ A simple hook to make the process wait
         </k> ...
        </instance>
 
-  rule <k> exit ... </k>
-       <foreignInstances> _ => false </foreignInstances>
+  rule <instances>
+       (<instance>
+          <k> exit ... </k>
+          ...
+        </instance> _ ) => .Bag
+       </instances>
+       <output> ... (.List => ListItem(JSON2String({"action" : "exit", "args" : [ .JSONs ] }) +String "\n")) </output>
+
 ```
 #### Simple Functions For Conversions
 

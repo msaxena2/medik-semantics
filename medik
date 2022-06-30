@@ -23,21 +23,22 @@ async def _sleep(k_process, duration, tid):
     logging.info('sleeping for duration {} for tid {}'.format(duration, tid))
     await asyncio.sleep(duration)
     k_process.stdin.write(json.dumps({ 'tid'    : tid
-                                     , 'action' : 'sleepResponse' }).encode('utf-8'))
+                                     , 'action' : 'sleepResponse' }, sort_keys=True).encode('utf-8'))
     await k_process.stdin.drain()
     logging.info('sleep complete message sent for tid {}'.format(tid))
 
 async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
+    is_config = False
     while True:
         logging.info('waiting for k:')
         out = await k_process.stdout.readline()
-        if out.startswith(b'<'):
-            print(out)
-            continue
-
         if not out:
             break
-        print(out)
+        if is_config or out.startswith(b'<'):
+            print(out.decode('utf-8'), end="")
+            is_config = True
+            continue
+
         out_json = json.loads(out)
         match out_json.get('action'):
             case 'print':
@@ -46,12 +47,17 @@ async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
                 sleep_task = asyncio.create_task(_sleep( k_process
                                                 , out_json['duration']
                                                 , out_json['tid']))
+            case 'exit':
+                logging.info('exit recvd')
             case _:
                 recv_cb(out_json)
+    logging.info('read stdout done')
 
 async def read_stderr(k_process):
     while True:
+        logging.info('waiting on stderr')
         err = await k_process.stderr.read()
+        logging.info('err received')
         if not err:
             break
         else:
@@ -72,7 +78,7 @@ async def krun(pgm_file, in_file=None):
     set_env()
 
     k_command = ( 'krun' , ['-d' , str(kompiled_dir.resolve())
-                           #, '--output' , 'none'
+                           , '--output' , 'none'
                            , pgm_file ])
 
     in_pipe = asyncio.subprocess.DEVNULL
