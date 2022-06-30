@@ -28,6 +28,7 @@ module MEDIK-SYNTAX
                | ThisExp
                | "obtainFrom" "(" Exp ")"
                | "yield"
+               | "exit"
                | "(" Exp ")"                                 [bracket]
                | Id "(" Exps ")"                             [strict(2)]
                > Exp "." Exp                                 [strict(1), left]
@@ -174,8 +175,6 @@ module MEDIK
                 <activeInstances> ListItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
-                <timeoutEvents> .Set </timeoutEvents>
-                <pendingTimers> 0 </pendingTimers>
                 <output stream="stdout"> .List </output>
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
@@ -1065,24 +1064,32 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 A simple hook to make the process wait
 
 ```k
-  syntax Int ::= "#sleep" "(" duration: Int ")" [function, hook(TIMER.sleep)]
+  syntax KItem ::= "sendSleepMessage" "(" duration: Int ")"
+                 | "waitForSleepResponse"
 
-  syntax Set ::= "#getTimeout"                  [function, hook(TIMER.getTimeout)]
+  rule sleep(Duration) => sendSleepMessage(Duration) ~> waitForSleepResponse
 
-  syntax KItem ::= "#storeSleepTimer" | "#sleepWait" "(" timerId: Int ")"
+  rule <k> sendSleepMessage(Duration:Int) => TId ... </k>
+       <tidCount> TId => TId +Int 1 </tidCount>
+       <output> ... (.List => ListItem(JSON2String({ "action"   : "sleep"
+                                                   , "duration" : Duration
+                                                   , "tid"      : TId }) +String "\n"))
+       </output>
+       <foreignInstances> _ => true </foreignInstances>
 
-  rule <k> sleep(Duration:Int) => #sleep(Duration) ~> #storeSleepTimer ...</k>
-       <pendingTimers> PT => PT +Int 1 </pendingTimers>
+  rule <instance>
+        <k> TId:Int ~> waitForSleepResponse => done ... </k> ...
+       </instance>
+       <instance>
+        <k> { "action" : "sleepResponse"
+            , "tid"    : TId
+            , _:JSONs } ~> processExternInput
+         => . ...
+        </k> ...
+       </instance>
 
-  rule I:Int ~> #storeSleepTimer => #sleepWait(I)
-
-  rule <k> #sleepWait(Tid) => Tid ... </k>
-       <timeoutEvents> (SetItem(Tid) => .Set) ... </timeoutEvents>
-       <pendingTimers> PT => PT -Int 1 </pendingTimers>
-
-  rule <timeoutEvents> .Set => #getTimeout </timeoutEvents>
-       <pendingTimers> PT </pendingTimers>
-    requires PT >Int 0  [priority(300)]
+  rule <k> exit ... </k>
+       <foreignInstances> _ => false </foreignInstances>
 ```
 #### Simple Functions For Conversions
 

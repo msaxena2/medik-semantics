@@ -31,8 +31,13 @@ async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
     while True:
         logging.info('waiting for k:')
         out = await k_process.stdout.readline()
+        if out.startswith(b'<'):
+            print(out)
+            continue
+
         if not out:
             break
+        print(out)
         out_json = json.loads(out)
         match out_json.get('action'):
             case 'print':
@@ -41,8 +46,6 @@ async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
                 sleep_task = asyncio.create_task(_sleep( k_process
                                                 , out_json['duration']
                                                 , out_json['tid']))
-                background_tasks.add(sleep_task)
-                background_tasks.add_done_callback(sleep_task.discard)
             case _:
                 recv_cb(out_json)
 
@@ -69,7 +72,7 @@ async def krun(pgm_file, in_file=None):
     set_env()
 
     k_command = ( 'krun' , ['-d' , str(kompiled_dir.resolve())
-                           , '--output' , 'none'
+                           #, '--output' , 'none'
                            , pgm_file ])
 
     in_pipe = asyncio.subprocess.DEVNULL
@@ -83,10 +86,11 @@ async def krun(pgm_file, in_file=None):
                                                     , stderr=asyncio.subprocess.PIPE)
 
     await write_stdin(k_process, in_file)
-    await asyncio.gather(read_stdout(k_process), read_stderr(k_process), return_exceptions=True)
+    await asyncio.gather(read_stdout(k_process), read_stderr(k_process))
+    logging.info('returning to main')
     return k_process.returncode
 
-def main():
+async def main():
     parser = ArgumentParser(description='MediK Interpreter')
 
     parser.add_argument('-in', '--in-file'
@@ -107,10 +111,11 @@ def main():
     logging.basicConfig(level=args.loglevel)
     retval = 0
     if args.in_file != None:
-        retval = asyncio.run(krun(args.pgm_file, args.in_file[0]))
+        retval = await krun(args.pgm_file, args.in_file[0])
     else:
-        retval = asyncio.run(krun(args.pgm_file))
-    return sys.exit(retval)
+        retval = await krun(args.pgm_file)
+    return retval
 
 if __name__ == "__main__":
-    main()
+    retval = asyncio.run(main())
+    sys.exit(retval)
