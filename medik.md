@@ -175,7 +175,7 @@ module MEDIK
                 <activeInstances> ListItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
-                <output stream="stdout"> .List </output>
+                //<output stream="stdout"> .List </output>
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
 ```
@@ -767,11 +767,12 @@ external machine
   rule Val2JSON(undef)    => "undef"
   rule Val2JSON(B:Bool)   => Bool2String(B)
 
-  rule <k> print(V:Val) => V ... </k>
-       <output> ...
-       (.List => ListItem( JSON2String({ "action" : "print"
-                                       , "args"   : [Val2JSON(V)] }) +String "\n"))
-       </output>
+  rule <k> print(V:Val)
+        => jsonWrite( { "action" : "print"
+                      , "args"   : [Val2JSON(V)] }
+                    , #stdout) ~> V ...
+       </k>
+       <tidCount> TId => TId +Int 1 </tidCount>
 
 ```
 
@@ -983,6 +984,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
                   | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
 
+  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
+
   syntax Exp  ::= "JSON2Exp"   "(" JSON ")"    [function]
   syntax Exps ::= "JSONs2Exps" "(" JSONs ")"   [function]
 
@@ -996,14 +999,13 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp({ _ } #as J) => constructObj(J)
 
   rule <k> doWrite(JSon | TId )
-        => TId ...
+        => jsonWrite(JSon, #stdout) ~> TId ...
        </k>
-       <output> ... (.List => ListItem(JSON2String(JSon) +String "\n")) </output>
 
   rule <k> readExternInput
         => jsonRead(#stdin) ~> processExternInput ~> readExternInput ...
        </k>
-       <foreignInstances> true </foreignInstances>                             [priority(301)]
+       <foreignInstances> true </foreignInstances>                       [priority(300)]
 
   rule [J:JSON , Js:JSONs] ~> processExternInput
     => J ~> processExternInput ~> [ Js ] ~> processExternInput
@@ -1064,21 +1066,19 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 A simple hook to make the process wait
 
 ```k
-  syntax KItem ::= "sendSleepMessage" "(" duration: Int ")"
-                 | "waitForSleepResponse"
+  syntax KItem ::= "waitForSleepResponse" "(" tid: Int ")"
 
-  rule sleep(Duration) => sendSleepMessage(Duration) ~> waitForSleepResponse
-
-  rule <k> sendSleepMessage(Duration:Int) => TId ... </k>
-       <tidCount> TId => TId +Int 1 </tidCount>
-       <output> ... (.List => ListItem(JSON2String({ "action"   : "sleep"
-                                                   , "duration" : Duration
-                                                   , "tid"      : TId }) +String "\n"))
-       </output>
+  rule <k> sleep(Duration:Int)
+        => jsonWrite( { "action"   : "sleep"
+                      , "duration" : Duration
+                      , "tid"      : TId }
+                    , #stdout ) ~> waitForSleepResponse(TId) ...
+       </k>
        <foreignInstances> _ => true </foreignInstances>
+       <tidCount> TId => TId +Int 1 </tidCount>
 
   rule <instance>
-        <k> TId:Int ~> waitForSleepResponse => done ... </k> ...
+        <k> waitForSleepResponse(TId) => done ... </k> ...
        </instance>
        <instance>
         <k> { "action" : "sleepResponse"
@@ -1094,7 +1094,6 @@ A simple hook to make the process wait
           ...
         </instance> _ ) => .Bag
        </instances>
-       <output> ... (.List => ListItem(JSON2String({"action" : "exit", "args" : [ .JSONs ] }) +String "\n")) </output>
 
 ```
 #### Simple Functions For Conversions
