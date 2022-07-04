@@ -29,6 +29,9 @@ init machine Starter {
         new RecieverA();
         new RecieverB();
         new Broadcaster();
+
+        sleep(3);
+        exit;
       }
     }
 }

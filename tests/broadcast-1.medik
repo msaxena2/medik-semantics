@@ -15,6 +15,7 @@ machine Broadcaster {
 
 init machine Receiver
   receives eTick {
+    var i = 0;
     init state Start {
       entry {
         new Broadcaster(this);
@@ -24,8 +25,12 @@ init machine Receiver
 
     state Recieve {
       on eTick do {
+        i = i + 1;
         print("Recieved Tick\n");
-        goto Recieve;
+        if (i < 5) {
+          goto Recieve;
+        }
+        exit;
       }
     }
 }

@@ -4,6 +4,7 @@ init machine Sleep {
       print("before sleep\n");
       sleep(5); // sleep for 5s
       print("after sleep\n");
+      exit;
     }
   }
 }

@@ -36,6 +36,8 @@ init machine Starter {
         new RecieverA();
         var b = new RecieverB(); // should receive "tick" as sent directly
         new Broadcaster(b);
+        sleep(3);
+        exit;
       }
     }
 }

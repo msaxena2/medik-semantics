@@ -17,6 +17,7 @@ machine A {
         print("[A]: Post Sleep\n");
         i = i + 1;
       }
+      exit;
     }
   }
 }

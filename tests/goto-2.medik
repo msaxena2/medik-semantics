@@ -8,6 +8,7 @@ machine GotoMachine {
     entry {
       sleep(5);
       print("Goto Machine\n");
+      exit;
     }
   }
 }

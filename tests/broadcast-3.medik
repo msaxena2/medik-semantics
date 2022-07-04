@@ -29,6 +29,8 @@ init machine Starter {
         new RecieverA();
         new RecieverB(); // shouldn't receive the event since it's not declared
         new Broadcaster();
+        sleep(3);
+        exit;
       }
     }
 }
