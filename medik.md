@@ -175,7 +175,7 @@ module MEDIK
                 <activeInstances> ListItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
-                //<output stream="stdout"> .List </output>
+                <output stream="stdout"> .List </output>
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
 ```
@@ -386,7 +386,7 @@ module MEDIK
   syntax KItem ::= "createMainInstance"
                  | "createExternHandlerInstance"
                  | "readExternInput"
-                 | "processExternInput"
+                 | "processExternInput" "(" IOJSON ")"
 
   syntax Id    ::= "$ExternHandler"
 
@@ -1002,24 +1002,28 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         => jsonWrite(JSon, #stdout) ~> TId ...
        </k>
 
-  rule <k> readExternInput
-        => jsonRead(#stdin) ~> processExternInput ~> readExternInput ...
+  rule readExternInput => doRead  [priority(300)]
+
+  rule <k> doRead
+        => processExternInput(jsonRead(#stdin)) ~> readExternInput ...
        </k>
-       <foreignInstances> true </foreignInstances>                       [priority(300)]
+       <foreignInstances> true </foreignInstances>  [priority(300)]
 
-  rule [J:JSON , Js:JSONs] ~> processExternInput
-    => J ~> processExternInput ~> [ Js ] ~> processExternInput
+  rule processExternInput([J:JSON , Js:JSONs])
+    => processExternInput(J) ~> processExternInput([ Js ])
 
-  rule [ .JSONs ] ~> processExternInput => .
+  rule processExternInput([ .JSONs ]) => .
 
-  rule { "action" : "exit" , _:JSONs } ~> processExternInput ~> _ => .
+  rule processExternInput({ "action" : "exit" , _:JSONs })~> _ => .
+
+  syntax KItem ::= "doRead"
 
   rule  <instance>
-          <k> { "id"       : IId
-              , "action"    : "broadcast"
-              , "eventName" : EName:String
-              , "eventArgs" : [ Args:JSONs ]
-              , _:JSONs } ~> processExternInput
+          <k> processExternInput({ "id"       : IId
+                                 , "action"    : "broadcast"
+                                 , "eventName" : EName:String
+                                 , "eventArgs" : [ Args:JSONs ]
+                                 , _:JSONs })
           => broadcast String2Id(EName), (JSONs2Exps(Args))  ...
           </k> ...
        </instance>
@@ -1033,11 +1037,11 @@ machines*, i.e. machines with transition systems *external* to the MediK program
     => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
 
   rule  <instance>
-          <k> { "id"       : IId
-              , "action"    : "updateField"
-              , "fieldName" : FNameStr:String
-              , "fieldVal"  : NewVal:JSON
-              , _:JSONs } ~> processExternInput
+          <k> processExternInput({ "id"       : IId
+                                 , "action"    : "updateField"
+                                 , "fieldName" : FNameStr:String
+                                 , "fieldVal"  : NewVal:JSON
+                                 , _:JSONs } )
           =>  broadcast createUpdateStateEvent(IName, FNameStr) ...
           </k> ...
        </instance>
@@ -1049,11 +1053,10 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 
   rule  <instance>
-          <k> { "tid"       : TId
-              , "id"        : _:String
-              , "result"    : "obtainResponse"
-              , "args"      : Val:JSON , _:JSONs  } ~> processExternInput
-           => . ...
+          <k> processExternInput({ "tid"       : TId
+                                 , "id"        : _:String
+                                 , "result"    : "obtainResponse"
+                                 , "args"      : Val:JSON , _:JSONs  }) => . ...
           </k> ...
        </instance>
        <instance>
@@ -1081,9 +1084,9 @@ A simple hook to make the process wait
         <k> waitForSleepResponse(TId) => done ... </k> ...
        </instance>
        <instance>
-        <k> { "action" : "sleepResponse"
-            , "tid"    : TId
-            , _:JSONs } ~> processExternInput
+        <k> processExternInput({ "action" : "sleepResponse"
+                               , "tid"    : TId
+                               , _:JSONs })
          => . ...
         </k> ...
        </instance>

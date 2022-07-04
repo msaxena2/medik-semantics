@@ -3,8 +3,7 @@
 from pathlib import Path
 from argparse import ArgumentParser
 
-import asyncio, contextlib, logging, os, sys, json, tempfile, json
-
+import asyncio, logging, os, sys, json, tempfile, json
 
 base_dir     = Path(__file__).parents[0]
 kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
@@ -18,6 +17,30 @@ def set_env():
                             + os.pathsep + os.environ['PATH']
 
 background_tasks = set()
+message_queue = asyncio.Queue()
+
+async def parse_json_stream(json_stream):
+    open_brace_count  = 0
+    close_brace_count = 0
+    last_scan_index   = 0
+    json_byte_str       = b''
+    try:
+        while True:
+            json_byte_str       += await json_stream.readuntil(b'}')
+            open_brace_count  += json_byte_str.count(b'{', last_scan_index)
+            close_brace_count += json_byte_str.count(b'}', last_scan_index)
+            if len(json_byte_str) == 0:
+                return None
+            if open_brace_count == close_brace_count:
+                obj = json.loads(json_byte_str)
+                json_byte_str       = b''
+                last_scan_index   = 0
+                open_proce_count  = 0
+                close_brace_count = 0
+                return obj
+            last_scan_index = len(json_byte_str)
+    except asyncio.IncompleteReadError:
+        return None
 
 async def _sleep(k_process, duration, tid):
     logging.info('sleeping for duration {} for tid {}'.format(duration, tid))
@@ -27,37 +50,31 @@ async def _sleep(k_process, duration, tid):
     await k_process.stdin.drain()
     logging.info('sleep complete message sent for tid {}'.format(tid))
 
-async def read_stdout(k_process, recv_cb=lambda msg: print(json.dumps(msg))):
-    is_config = False
+async def read_stdout(k_process, handler_cb=lambda msg: print(json.dumps(msg))):
     while True:
         logging.info('waiting for k:')
-        out = await k_process.stdout.readline()
-        if not out:
-            break
-        if is_config or out.startswith(b'<'):
-            print(out.decode('utf-8'), end="")
-            is_config = True
-            continue
-
-        out_json = json.loads(out)
-        match out_json.get('action'):
-            case 'print':
-                print(*out_json['args'], end='', flush=True)
-            case 'sleep':
-                sleep_task = asyncio.create_task(_sleep( k_process
-                                                , out_json['duration']
-                                                , out_json['tid']))
-            case 'exit':
-                logging.info('exit recvd')
-            case _:
-                recv_cb(out_json)
-    logging.info('read stdout done')
+        out_json = await parse_json_stream(k_process.stdout)
+        if out_json == None:
+            break;
+        try:
+            match out_json.get('action'):
+                case 'print':
+                    print(*out_json['args'], end='', flush=True)
+                case 'sleep':
+                    sleep_task = asyncio.create_task(_sleep( k_process
+                                                    , out_json['duration']
+                                                    , out_json['tid']))
+                case 'exit':
+                    break
+                case _:
+                    handler_cb(out_json)
+        except (ValueError, AttributeError) as e:
+            sys.err.write(str(e))
+            return None
 
 async def read_stderr(k_process):
     while True:
-        logging.info('waiting on stderr')
         err = await k_process.stderr.read()
-        logging.info('err received')
         if not err:
             break
         else:
@@ -74,6 +91,7 @@ async def write_stdin(k_process, in_file=None):
         await k_process.stdin.drain()
         logging.info('sending to k complete')
 
+
 async def krun(pgm_file, in_file=None):
     set_env()
 
@@ -81,19 +99,15 @@ async def krun(pgm_file, in_file=None):
                            , '--output' , 'none'
                            , pgm_file ])
 
-    in_pipe = asyncio.subprocess.DEVNULL
-    if in_file != None:
-        in_pipe = asyncio.subprocess.PIPE
-
     k_process = await asyncio.create_subprocess_exec( k_command[0]
                                                     , *k_command[1]
                                                     , stdin=asyncio.subprocess.PIPE
                                                     , stdout=asyncio.subprocess.PIPE
                                                     , stderr=asyncio.subprocess.PIPE)
 
-    await write_stdin(k_process, in_file)
-    await asyncio.gather(read_stdout(k_process), read_stderr(k_process))
-    logging.info('returning to main')
+    await asyncio.gather( read_stdout(k_process)
+                        , write_stdin(k_process, in_file)
+                        , read_stderr(k_process))
     return k_process.returncode
 
 async def main():
@@ -114,7 +128,7 @@ async def main():
                        )
 
     args = parser.parse_args()
-    logging.basicConfig(level=args.loglevel)
+    logging.basicConfig(level=args.loglevel, format='%(message)s')
     retval = 0
     if args.in_file != None:
         retval = await krun(args.pgm_file, args.in_file[0])
