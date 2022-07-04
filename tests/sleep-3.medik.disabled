@@ -11,7 +11,6 @@ machine SleepMachine {
   }
   state PostStart {
     entry {
-      var i = 0;
       print("[" + this.name + "]: Pre Sleep\n");
       sleep(this.sleepTime);
       print("[" + this.name + "]: Post Sleep\n");
@@ -25,8 +24,9 @@ init machine Driver {
       var a = new SleepMachine("A", 5);
       var b = new SleepMachine("B", 1);
       send a, Start;
-      sleep(1);
       send b, Start;
+      sleep(20);
+      exit;
     }
   }
 }
