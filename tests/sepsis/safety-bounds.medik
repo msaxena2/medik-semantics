@@ -1,0 +1,148 @@
+interface App {
+}
+
+machine MeasurementsBounds
+  receives AgeEntered
+         , HighRiskConditionsEntered {
+
+  vars age, weight, highRiskConditions;
+
+  vars hrUpperBound          , hrLowerBound
+     , bpSysUpperBound       , bpSysLowerBound
+     , tempUpperBound        , tempLowerBound
+     , coreTempUpperBound    , coreTempLowerBound
+     , mapUpperBound         , mapLowerBound
+     , baseExcessUpperBound  , baseExcessUpperBound
+     , lactateLowerBound     , lactateUpperBound
+     , urineOutputLowerBoudn , urineOutputUpperBound;
+
+  vars pulseQuality, capillaryRefill, skinColor, mentalStatus;
+
+  var highRiskConditions;
+  vars epinephrineBounds, norepinephrineBounds, dopamineBounds;
+
+  fun days(age) {
+    return age;
+  }
+
+  fun months(age) {
+    return 30 * age;
+  }
+
+  fun ageInYears(age) {
+    return age / 365;
+  }
+
+  fun safeHRLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 100;
+        interval(months(1), month(2))  : return 100;
+        interval(months(2), years(1))  : return 90;
+        interval(years(1),  years(2))  : return 80;
+        interval(years(2),  years(4))  : return 70;
+        interval(years(4),  years(6))  : return 60;
+        interval(years(6),  years(10)) : return 60;
+        interval(years(10), years(13)) : return 60;
+        default                        : return 60;
+    }
+  }
+
+  fun safeHRLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 205;
+        interval(months(1), month(2))  : return 205;
+        interval(months(2), years(1))  : return 190;
+        interval(years(1),  years(2))  : return 190;
+        interval(years(2),  years(4))  : return 140;
+        interval(years(4),  years(6))  : return 140;
+        interval(years(6),  years(10)) : return 140;
+        interval(years(10), years(13)) : return 100;
+        default                        : return 100;
+    }
+  }
+
+  fun safeBpSysLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 60;
+        interval(months(1), month(2))  : return 70;
+        interval(months(2), years(1))  : return 70;
+        interval(years(1),  years(2))  : return 70 + (ageInYears(age) * 2);
+        interval(years(2),  years(4))  : return 70 + (ageInYears(age) * 2);
+        interval(years(4),  years(6))  : return 70 + (ageInYears(age) * 2);
+        interval(years(6),  years(10)) : return 70 + (ageInYears(age) * 2);
+        interval(years(10), years(13)) : return 90;
+        default                        : return 90;
+    }
+  }
+
+  fun safeBpSysUpperBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 180;
+        interval(months(1), month(2))  : return 180;
+        interval(months(2), years(1))  : return 180;
+        interval(years(1),  years(2))  : return 180;
+        interval(years(2),  years(4))  : return 180;
+        interval(years(4),  years(6))  : return 180;
+        interval(years(6),  years(10)) : return 180;
+        interval(years(10), years(13)) : return 180;
+        default                        : return 180;
+    }
+  }
+
+  fun safeTempLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 36;
+        interval(months(1), month(2))  : return 36;
+        interval(months(2), years(1))  : return 36;
+        interval(years(1),  years(2))  : return 36;
+        interval(years(2),  years(4))  : return 36;
+        interval(years(4),  years(6))  : return 36;
+        interval(years(6),  years(10)) : return 36;
+        interval(years(10), years(13)) : return 36;
+        default                        : return 36;
+    }
+  }
+
+  fun safeTempUpperBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 38;
+        interval(months(1), month(2))  : return 38;
+        interval(months(2), years(1))  : return 39;
+        interval(years(1),  years(2))  : return 39;
+        interval(years(2),  years(4))  : return 39;
+        interval(years(4),  years(6))  : return 39;
+        interval(years(6),  years(10)) : return 39;
+        interval(years(10), years(13)) : return 39;
+        default                        : return 39;
+    }
+  }
+
+  init state Running {
+    on AgeEntered(age) do {
+      this.age = age;
+
+      this.hrLowerBound    = safeHRLowerBound(age);
+      this.hrUpperBound    = safeHRUpperBound(age);
+
+      this.bpSysLowerBound = safeBpSysLowerBound(age);
+      this.bpSysUpperBound = safeBpSysUpperBound(age);
+
+      this.tempLowerBound  = safeTempLowerBound(age);
+      this.tempLowerBound  = safeTempUpperBound(age);
+
+      broadcast ConfirmAgeEntered;
+      goto Running;
+    }
+  }
+
+}
+
+init machine Driver {
+  init state Start {
+
+    entry {
+      var app = createFromInterface(App, "app");
+    }
+  }
+
+}
