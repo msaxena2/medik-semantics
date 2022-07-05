@@ -2,21 +2,19 @@ machine MeasurementsBounds
   receives AgeEntered
          , HighRiskConditionsEntered {
 
-  vars age, weight, highRiskConditions;
+  vars age, weight;
 
   vars hrUpperBound          , hrLowerBound
      , bpSysUpperBound       , bpSysLowerBound
      , tempUpperBound        , tempLowerBound
      , coreTempUpperBound    , coreTempLowerBound
      , mapUpperBound         , mapLowerBound
-     , baseExcessUpperBound  , baseExcessUpperBound
-     , lactateLowerBound     , lactateUpperBound
-     , urineOutputLowerBoudn , urineOutputUpperBound;
+     , baseExcessUpperBound  , baseExcessLowerBound
+     , lactateUpperBound     , lactateLowerBound
+     , urineOutputUpperBound , urineOutputLowerBound;
 
-  vars pulseQuality, capillaryRefill, skinColor, mentalStatus;
+  vars pulseQuality, capillaryRefill, skinColor, mentalStatus, highRiskConditions;
 
-  var highRiskConditions;
-  vars epinephrineBounds, norepinephrineBounds, dopamineBounds;
 
   fun days(age) {
     return age;
@@ -44,7 +42,7 @@ machine MeasurementsBounds
     }
   }
 
-  fun safeHRLowerBound(age) {
+  fun safeHRUpperBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 205;
         interval(months(1), month(2))  : return 205;
@@ -114,9 +112,9 @@ machine MeasurementsBounds
     }
   }
 
-init machine SepsisScreenMachine {
-  var patient;
   init state Running {
+    entry {
+    }
     on AgeEntered(age) do {
       this.age = age;
 
@@ -132,13 +130,17 @@ init machine SepsisScreenMachine {
       broadcast ConfirmAgeEntered;
       goto Running;
     }
-
   }
 }
 
-machine AntiboiticTherapy {
-
-}
+//interface TabletApp
+//  receives  ConfirmAgeEntered
+//          , ConfirmWeightEntered
+//          , ConfirmHighRiskConditionsEntered { }
+//
+//interface Datastore {  }
+//
+//interface Sensors {  }
 
 machine SepsisScreening
   receives  ConfirmAgeEntered
@@ -148,20 +150,21 @@ machine SepsisScreening
 
   vars tabletApp, datastore, safetyBounds;
 
-  init state Start(tabletApp, datastore, safetyBounds) {
-    entry {
-      this.tabletApp = tabletApp;
-      this.datastore = datastore;
+  init state Start {
+    entry (tabletApp, datastore, safetyBounds) {
+      this.tabletApp      = tabletApp;
+      this.datastore      = datastore;
       this.safetyBounds   = safetyBounds;
     }
     on StartScreening do {
       goto  ObtainAge;
     }
   }
+
   state ObtainAge {
     entry {
-      if (safetyBounds.age is undef) {
-        instruct(tabletApp, "Enter patient age");
+      if (safetyBounds.age == undef) {
+        send tabletApp, Instruct, ("Enter patient age");
       } else {
         goto ObtainHighRiskConditions;
       }
@@ -171,173 +174,175 @@ machine SepsisScreening
     }
   }
 
-  state ObtainHighRiskConditions{
-    entry {
-      if (safetyBounds.highRiskConditions is undef) {
-        instruct(tableApp, "Enter high risk conditions");
-      } else {
-        goto ObtainMeasurements;
-      }
-    }
-    on ConfirmHighRiskConditionsEntered do {
-      goto ObtainMeasurements;
-    }
-  }
+  //state ObtainHighRiskConditions{
+  //  entry {
+  //    if (safetyBounds.highRiskConditions == undef) {
+  //      send tableApp, Instuct, ("Enter high risk conditions");
+  //    } else {
+  //      goto ObtainMeasurements;
+  //    }
+  //  }
+  //  on ConfirmHighRiskConditionsEntered do {
+  //    goto ObtainMeasurements;
+  //  }
+  //}
 
-  state ObtainMeasurements {
-    entry() {
-      instruct(app, "Obtain measurements");
-    }
-    on ConfirmMeasurementsObtained do {
-      goto calculatePSepsisScore;
-    }
-  }
+  //state ObtainMeasurements {
+  //  entry() {
+  //    send app, Instruct, ("Obtain measurements");
+  //  }
+  //  on ConfirmMeasurementsObtained do {
+  //    goto CalculatePSepsisScore;
+  //  }
+  //}
 
-  fun isNormal(parameter, normalBounds) {
-    val storedMeasurement = obtainFrom(datastore, parameter);
-    if (!(stored is undef)) {
-      return storedMeasurement in normalBounds;
-    } else {
-      return true;
-    }
-  }
+  //state CalculatePSepsisScore {
+  //  print("Came to calculate score");
+  //  exit;
+  //}
 
-  state CalculateScore {
-    entry() {
-      hrAbnormal                 = !isNormal("hr",              safetyBounds.normalHR)
-      bpSysAbnormal              = !isNormal("bpSys",           safetyBounds.normalBPSys)
-      pulseQualityAbnormal       = !isNormal("pulseQuality",    safetyBounds.normalPulseQuality)
-      tempAbnormal               = !isNormal("temp",            safetyBounds.normalTemp)
-      mentalStatusAbnormal       = !isNormal("mentalStatus",    safetyBounds.normalMentalStatus)
-      capillaryRefillAbnormal    = !isNormal("capillaryRefill", safetyBounds.normalCapRefill)
-      skinColorAbnormal          = !isNormal("skinColor",       safetyBounds.normalSkinColor)
-      highRiskCondition          = !(size(safetyBounds.highRiskCondition) == 0)
+  //fun isNormal(parameter, normalBounds) {
+  //  val storedMeasurement = obtainFrom(datastore, parameter);
+  //  if (!(stored == undef)) {
+  //    return storedMeasurement in normalBounds;
+  //  } else {
+  //    return true;
+  //  }
+  //}
 
-      var bucket1 = hrAbnormal || bpAbnormal || pqAbnormal;
+  //state CalculateScore {
+  //  entry() {
+  //    hrAbnormal                 = !isNormal("hr",              safetyBounds.normalHR)
+  //    bpSysAbnormal              = !isNormal("bpSys",           safetyBounds.normalBPSys)
+  //    pulseQualityAbnormal       = !isNormal("pulseQuality",    safetyBounds.normalPulseQuality)
+  //    tempAbnormal               = !isNormal("temp",            safetyBounds.normalTemp)
+  //    mentalStatusAbnormal       = !isNormal("mentalStatus",    safetyBounds.normalMentalStatus)
+  //    capillaryRefillAbnormal    = !isNormal("capillaryRefill", safetyBounds.normalCapRefill)
+  //    skinColorAbnormal          = !isNormal("skinColor",       safetyBounds.normalSkinColor)
+  //    highRiskCondition          = !(size(safetyBounds.highRiskCondition) == 0)
 
-      var bucket2 = tempAbnormal;
+  //    var bucket1 = hrAbnormal || bpAbnormal || pqAbnormal;
 
-      var perfusion = capillaryRefillAbnormal || skinColorAbnormal;
-      var bucket3   = mentalStatusAbnormal    || prefusion || highRiskConditions;
+  //    var bucket2 = tempAbnormal;
 
-      var sepsisSuspected = bucket1 || bucket2 || bucket3
-      send tabletApp, DisplayDiagnosis, ( hrAbnormal
-                                        , bpSysAbnormal
-                                        , pulseQualitAbnormal
-                                        , tempAbnormal
-                                        , mentalStatusAbnormal
-                                        , capillaryRefillAbnormal
-                                        , skinColorAbnormal
-                                        , highRiskCondition)
+  //    var perfusion = capillaryRefillAbnormal || skinColorAbnormal;
+  //    var bucket3   = mentalStatusAbnormal    || prefusion || highRiskConditions;
 
-      if (sepsisSuspected) {
-        broadcast SepsisSuspected;
-      } else {
-        sleep(30);
-        goto ObtainMeasurements;
-      }
-    }
-  }
+  //    var sepsisSuspected = bucket1 || bucket2 || bucket3
+  //    send tabletApp, DisplayDiagnosis, ( hrAbnormal
+  //                                      , bpSysAbnormal
+  //                                      , pulseQualitAbnormal
+  //                                      , tempAbnormal
+  //                                      , mentalStatusAbnormal
+  //                                      , capillaryRefillAbnormal
+  //                                      , skinColorAbnormal
+  //                                      , highRiskCondition)
+
+  //    if (sepsisSuspected) {
+  //      broadcast SepsisSuspected;
+  //    } else {
+  //      sleep(30);
+  //      goto ObtainMeasurements;
+  //    }
+  //  }
+  //}
 }
 
-machine SepticShockScreening receives SepsisSuspected {
-  var safetyBounds;
-
-  fun lowerThanIfPresent(parameter, lowerBound) {
-    val storedMeasurement = obtainFrom(datastore, parameter);
-    if (!(stored is undef)) {
-      return storedMeasurement < safetyBounds.parameter;
-    } else {
-      return true;
-    }
-  }
-
-  fun equalToIfPresent(parameter, upperBound) {
-    val storedMeasurement = obtainFrom(datastore, parameter);
-    if (!(stored is undef)) {
-      return storedMeasurement > safetyBounds.parameter;
-    } else {
-      return true;
-    }
-  }
-
-  fun greaterThanIfPresent(parameter, upperBound) {
-    val storedMeasurement = obtainFrom(datastore, parameter);
-    if (!(stored is undef)) {
-      return storedMeasurement > safetyBounds.parameter;
-    } else {
-      return true;
-    }
-  }
-
-  init state Start {
-    entry(safetyBounds) {
-      this.safetyBounds = safetyBounds;
-    }
-
-    on SepsisSuspected do {
-      var meanArterialPressureAbnormal = lowerThanIfPresent("meanArterialPressure", safetyBounds.normalMeanArterialPressure)
-
-      if (meanArterialPressureAbnormal) {
-        broadcast SepticShockSuspected;
-      } else {
-        if (   (obtainFrom(datastore, "ephinephrineDose")   > 5)
-            || (obtainFrom(datastore, "norepinephrineDose") > 5)
-            || (obtainFrom(datastore, "dopamineDose")       > 5) ) {
-          broadcast SepticShockSuspected;
-        }
-      } else {
-        var perfusion = 0;
-        if ( lowerThanIfPressent("baseExcess", -5)) {
-          perfusion = perfusion + 1;
-        }
-
-        if ( greaterThanIfPresent("lactate", 2 * safetyBounds.normalLactate)) {
-          perfusion = perfusion + 1;
-        }
-
-        if ( lessThanIfPresent("urineOutput", 0.5)) {
-          perfusion = perfusion + 1;
-        }
-
-        if ( equalToIfPresent("capillaryRefill", ">5s")) {
-          perfusion = perfusion + 1;
-        }
-        // Todo Implement
-
-        if (perfusion > 2) {
-          broadcast SepticShockSuspected;
-        }
-  }
-}
-
-interface TabletApp
-  receives  ConfirmAgeEntered
-          , ConfirmWeightEntered
-          , ConfirmHighRiskConditionsEntered { }
-
-interface Datastore {  }
-
-interface Sensors {  }
 
 init machine PSepsisGuidanceSystem receives StopGuidance {
-  var tabletApp     = createFromInterface(TabletApp);
-  var datastore     = createFromInterface(Datastore);
-  var safetyBounds  = new SafetyBounds();
+  var tabletApp     = createFromInterface(TabletApp, "tablet");
+  var datastore     = createFromInterface(Datastore, "datastore");
+  var measurementBounds = new MeasurementsBounds();
 
-  init state CreateMachines {
-    entry {
-      instruct(tabletApp, "Enter Age and Weight");
-      new SepsisScreening(tabletApp, datastore, safetyBounds);
-      new AntibioticTherapy();
-      new SepsisScreening();
-      new FluidTherapy();
-      new SepticShockScreening();
-      new IonotropicSupportTherapy(); }
+  //init state CreateMachines {
+  //  entry {
+  //    send tabletApp, Instruct, ("Enter Age and Weight");
+  //    //new SepsisScreening(tabletApp, datastore, safetyBounds);
+  //    //new AntibioticTherapy();
+  //    //new SepsisScreening();
+  //    //new FluidTherapy();
+  //    //new SepticShockScreening();
+  //    //new IonotropicSupportTherapy(); }
 
-    on StopGuidance do {
-      // savelog();
-    }
+  //  on StopGuidance do {
+  //    // savelog();
+  //  }
 
-  }
+  //}
 }
+
+//machine SepticShockScreening receives SepsisSuspected {
+//  var safetyBounds;
+//
+//  fun lowerThanIfPresent(parameter, lowerBound) {
+//    val storedMeasurement = obtainFrom(datastore, parameter);
+//    if (!(stored is undef)) {
+//      return storedMeasurement < safetyBounds.parameter;
+//    } else {
+//      return true;
+//    }
+//  }
+//
+//  fun equalToIfPresent(parameter, upperBound) {
+//    val storedMeasurement = obtainFrom(datastore, parameter);
+//    if (!(stored is undef)) {
+//      return storedMeasurement > safetyBounds.parameter;
+//    } else {
+//      return true;
+//    }
+//  }
+//
+//  fun greaterThanIfPresent(parameter, upperBound) {
+//    val storedMeasurement = obtainFrom(datastore, parameter);
+//    if (!(stored is undef)) {
+//      return storedMeasurement > safetyBounds.parameter;
+//    } else {
+//      return true;
+//    }
+//  }
+//
+//  init state Start {
+//    entry(safetyBounds) {
+//      this.safetyBounds = safetyBounds;
+//    }
+//
+//    on SepsisSuspected do {
+//      var meanArterialPressureAbnormal = lowerThanIfPresent("meanArterialPressure", safetyBounds.normalMeanArterialPressure)
+//
+//      if (meanArterialPressureAbnormal) {
+//        broadcast SepticShockSuspected;
+//      } else {
+//        if (   (obtainFrom(datastore, "ephinephrineDose")   > 5)
+//            || (obtainFrom(datastore, "norepinephrineDose") > 5)
+//            || (obtainFrom(datastore, "dopamineDose")       > 5) ) {
+//          broadcast SepticShockSuspected;
+//        }
+//      } else {
+//        var perfusion = 0;
+//        if ( lowerThanIfPressent("baseExcess", -5)) {
+//          perfusion = perfusion + 1;
+//        }
+//
+//        if ( greaterThanIfPresent("lactate", 2 * safetyBounds.normalLactate)) {
+//          perfusion = perfusion + 1;
+//        }
+//
+//        if ( lessThanIfPresent("urineOutput", 0.5)) {
+//          perfusion = perfusion + 1;
+//        }
+//
+//        if ( equalToIfPresent("capillaryRefill", ">5s")) {
+//          perfusion = perfusion + 1;
+//        }
+//        // Todo Implement
+//
+//        if (perfusion > 2) {
+//          broadcast SepticShockSuspected;
+//        }
+//  }
+//}
+//
+//machine AntiboiticTherapy {
+//
+//}
+
