@@ -3,7 +3,7 @@
 from pathlib import Path
 from argparse import ArgumentParser
 
-import asyncio, logging, os, sys, json, tempfile, json
+import asyncio, logging, os, sys, json, tempfile, json, websockets
 
 base_dir     = Path(__file__).parents[0]
 kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
@@ -17,7 +17,22 @@ def set_env():
                             + os.pathsep + os.environ['PATH']
 
 background_tasks = set()
-message_queue = asyncio.Queue()
+to_k_queue   = asyncio.Queue()
+from_k_queue = asyncio.Queue()
+
+async def remote_handler(end_point):
+    logging.info('using {} for remote connection'.format(end_point))
+    async with websockets.connect(end_point) as ws_endpoint:
+        print('waiting for addition to queue')
+        while True:
+            msg = await from_k_queue.get()
+            logging.info('sending message {}'.format(json.dumps(msg)))
+            await ws_endpoint.send(json.dumps(msg))
+
+            response = await ws_endpoint.recv()
+            print('recvd from remote {}'.format(response))
+            await to_k_queue.put(json.loads(response))
+
 
 async def parse_json_stream(json_stream):
     open_brace_count  = 0
@@ -50,7 +65,7 @@ async def _sleep(k_process, duration, tid):
     await k_process.stdin.drain()
     logging.info('sleep complete message sent for tid {}'.format(tid))
 
-async def read_stdout(k_process, handler_cb=lambda msg: print(json.dumps(msg))):
+async def read_stdout(k_process):
     while True:
         logging.info('waiting for k:')
         out_json = await parse_json_stream(k_process.stdout)
@@ -67,7 +82,9 @@ async def read_stdout(k_process, handler_cb=lambda msg: print(json.dumps(msg))):
                 case 'exit':
                     break
                 case _:
-                    handler_cb(out_json)
+                    logging.info('adding to from_k_queue')
+                    await from_k_queue.put(out_json)
+
         except (ValueError, AttributeError) as e:
             sys.err.write(str(e))
             return None
@@ -90,10 +107,21 @@ async def write_stdin(k_process, in_file=None):
         k_process.stdin.write(in_data.encode('utf-8'))
         await k_process.stdin.drain()
         logging.info('sending to k complete')
+    else:
+        while True:
+            to_k = await to_k_queue.get()
+            k_process.stdin.write(json.dumps(to_k).encode('utf-8'))
+            await k_process.stdin.drain()
 
 
-async def krun(pgm_file, in_file=None):
+async def krun(pgm_file, end_point, in_file=None):
     set_env()
+
+    extern_handler_task = None
+
+    if end_point != None:
+        logging.info('starting remote connection with {}'.format(end_point))
+        extern_handler_task = asyncio.create_task(remote_handler(end_point))
 
     k_command = ( 'krun' , ['-d' , str(kompiled_dir.resolve())
                            , '--output' , 'none'
@@ -108,6 +136,10 @@ async def krun(pgm_file, in_file=None):
     await asyncio.gather( read_stdout(k_process)
                         , write_stdin(k_process, in_file)
                         , read_stderr(k_process))
+
+    if extern_handler_task != None:
+        extern_handler_task.cancel()
+
     return k_process.returncode
 
 async def main():
@@ -124,16 +156,19 @@ async def main():
                        , help='print verbose logs'
                        , action='store_const'
                        , dest='loglevel'
-                       , const=logging.INFO
-                       )
+                       , const=logging.INFO)
+    parser.add_argument('-ep', '--end-point'
+                       , dest='end_point'
+                       , help='Websocket endpoint for messages')
 
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel, format='%(message)s')
     retval = 0
+
     if args.in_file != None:
-        retval = await krun(args.pgm_file, args.in_file[0])
+        retval = await krun(args.pgm_file, args.end_point, args.in_file[0])
     else:
-        retval = await krun(args.pgm_file)
+        retval = await krun(args.pgm_file, args.end_point)
     return retval
 
 if __name__ == "__main__":
