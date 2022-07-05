@@ -1,147 +1,343 @@
-machine Heart receives stopEvent {
-  vars hr, sysBP, pulseQuality, capillaryRefill;
+machine MeasurementsBounds
+  receives AgeEntered
+         , HighRiskConditionsEntered {
 
-  init state ObtainHeartVitals {
-    entry() {
-      hr              = obtain;
-      sysBP           = obtain;
-      pulseQuality    = obtain;
-      capillaryRefill = obtain;
+  vars age, weight, highRiskConditions;
 
-      broadcast HeartMachineUpdate;
-      send this, updateHeartMachine;
-    }
+  vars hrUpperBound          , hrLowerBound
+     , bpSysUpperBound       , bpSysLowerBound
+     , tempUpperBound        , tempLowerBound
+     , coreTempUpperBound    , coreTempLowerBound
+     , mapUpperBound         , mapLowerBound
+     , baseExcessUpperBound  , baseExcessUpperBound
+     , lactateLowerBound     , lactateUpperBound
+     , urineOutputLowerBoudn , urineOutputUpperBound;
 
-    on updateHeartMachine do {
-      sleep(2);
-      goto ObtainHeartVitals;
-    }
+  vars pulseQuality, capillaryRefill, skinColor, mentalStatus;
 
-    on stopEvent do {
-      stop;
-    }
-  }
-}
-
-machine ImmuneSystem receives stopEvent {
-  var temp;
-  init state ObtainImmuneSystemVitals {
-    entry {
-      temp = obtain;
-
-      broadcast ImmuneSystemUpdate;
-      send this, updateImmuneSystem;
-    }
-
-    on updateImmuneSystem do {
-      sleep(2);
-      goto ObtainImmuneSystemVitals;
-    }
-
-    on stopEvent do {
-      stop;
-    }
-  }
-}
-
-machine Patient {
-  var heart              = new Heart();
-  var immuneSystem       = new ImmuneSystem();
-  var age                = obtain;
-  var mentalStatus       = obtain;
-  var highRiskConditions = obtain;
-  var skinCondition      = obtain;
-}
-
-init machine SepsisScreenMachine {
-  var patient;
+  var highRiskConditions;
+  vars epinephrineBounds, norepinephrineBounds, dopamineBounds;
 
   fun days(age) {
     return age;
   }
 
-  fun years(age) {
-    return 365 * age;
+  fun months(age) {
+    return 30 * age;
   }
 
   fun ageInYears(age) {
     return age / 365;
   }
 
-  fun abnormalHeartRate() {
-      days(patient.age) in {
-        interval(days(0), days(60))    : return !(patient.heart.hr in interval(100, 205));
-        interval(days(60), years(1))   : return !(patient.heart.hr in interval(90, 190));
-        interval(years(1), years(2))   : return !(patient.heart.hr in interval(80, 190));
-        interval(years(2), years(4))   : return !(patient.heart.hr in interval(70, 140));
-        interval(years(4), years(10))  : return !(patient.heart.hr in interval(60, 140));
-        interval(years(10), years(13)) : return !(patient.heart.hr in interval(60, 130));
-        default                        : return !(patient.heart.hr in interval(60, 130));
-      }
-  }
-
-  fun abnormalBloodPressure() {
-    days(patient.age) in {
-        interval(days(0), days(28))    : return !(patient.heart.sysBP in interval(60, 180));
-        interval(days(28), years(1))   : return !(patient.heart.sysBP in interval(70, 180));
-        interval(years(1), years(10))  : return !(patient.heart.sysBP in interval(70 + (ageInYears(patient.age) * 2), 180));
-        interval(years(10), years(20)) : return !(patient.heart.sysBP in interval(90, 180));
-        default                        : return !(patient.heart.sysBP in interval(100, 180));
+  fun safeHRLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 100;
+        interval(months(1), month(2))  : return 100;
+        interval(months(2), years(1))  : return 90;
+        interval(years(1),  years(2))  : return 80;
+        interval(years(2),  years(4))  : return 70;
+        interval(years(4),  years(6))  : return 60;
+        interval(years(6),  years(10)) : return 60;
+        interval(years(10), years(13)) : return 60;
+        default                        : return 60;
     }
   }
 
-  fun abnormalTemp() {
-    days(patient.age) in {
-        interval(days(0), days(60))    : return !(patient.immuneSystem.temp in interval(36, 38));
-        interval(days(60), years(20))  : return !(patient.immuneSystem.temp in interval(36, 38));
-        default                        : return !(patient.immuneSystem.temp in interval(36, 38));
+  fun safeHRLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 205;
+        interval(months(1), month(2))  : return 205;
+        interval(months(2), years(1))  : return 190;
+        interval(years(1),  years(2))  : return 190;
+        interval(years(2),  years(4))  : return 140;
+        interval(years(4),  years(6))  : return 140;
+        interval(years(6),  years(10)) : return 140;
+        interval(years(10), years(13)) : return 100;
+        default                        : return 100;
     }
   }
 
-  fun abnormalPulseQuality() {
-    return !(patient.heart.pulseQuality == "Normal");
+  fun safeBpSysLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 60;
+        interval(months(1), month(2))  : return 70;
+        interval(months(2), years(1))  : return 70;
+        interval(years(1),  years(2))  : return 70 + (ageInYears(age) * 2);
+        interval(years(2),  years(4))  : return 70 + (ageInYears(age) * 2);
+        interval(years(4),  years(6))  : return 70 + (ageInYears(age) * 2);
+        interval(years(6),  years(10)) : return 70 + (ageInYears(age) * 2);
+        interval(years(10), years(13)) : return 90;
+        default                        : return 90;
+    }
   }
 
-  fun abnormalMentalStatus() {
-    return !(patient.mentalStatus == "Normal");
+  fun safeBpSysUpperBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 180;
+        interval(months(1), month(2))  : return 180;
+        interval(months(2), years(1))  : return 180;
+        interval(years(1),  years(2))  : return 180;
+        interval(years(2),  years(4))  : return 180;
+        interval(years(4),  years(6))  : return 180;
+        interval(years(6),  years(10)) : return 180;
+        interval(years(10), years(13)) : return 180;
+        default                        : return 180;
+    }
   }
 
-  fun abnormalCapillaryRefill() {
-    return !((patient.heart.capillaryRefill == "1") || (patient.heart.capillaryRefill == "2"));
+  fun safeTempLowerBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 36;
+        interval(months(1), month(2))  : return 36;
+        interval(months(2), years(1))  : return 36;
+        interval(years(1),  years(2))  : return 36;
+        interval(years(2),  years(4))  : return 36;
+        interval(years(4),  years(6))  : return 36;
+        interval(years(6),  years(10)) : return 36;
+        interval(years(10), years(13)) : return 36;
+        default                        : return 36;
+    }
   }
 
-  fun abnormalSkinColor() {
-    return (patient.skinCondition == "Gray") || (patient.skinCondition == "Gray and motted");
+  fun safeTempUpperBound(age) {
+    days(age) in {
+        interval(days(0)  , months(1)) : return 38;
+        interval(months(1), month(2))  : return 38;
+        interval(months(2), years(1))  : return 39;
+        interval(years(1),  years(2))  : return 39;
+        interval(years(2),  years(4))  : return 39;
+        interval(years(4),  years(6))  : return 39;
+        interval(years(6),  years(10)) : return 39;
+        interval(years(10), years(13)) : return 39;
+        default                        : return 39;
+    }
   }
 
-  fun highRiskConditions() {
-    return !(patient.highRiskConditions == 0);
-  }
+init machine SepsisScreenMachine {
+  var patient;
+  init state Running {
+    on AgeEntered(age) do {
+      this.age = age;
 
-  init state ObtainVitals {
+      this.hrLowerBound    = safeHRLowerBound(age);
+      this.hrUpperBound    = safeHRUpperBound(age);
+
+      this.bpSysLowerBound = safeBpSysLowerBound(age);
+      this.bpSysUpperBound = safeBpSysUpperBound(age);
+
+      this.tempLowerBound  = safeTempLowerBound(age);
+      this.tempLowerBound  = safeTempUpperBound(age);
+
+      broadcast ConfirmAgeEntered;
+      goto Running;
+    }
+
+  }
+}
+
+machine AntiboiticTherapy {
+
+}
+
+machine SepsisScreening
+  receives  ConfirmAgeEntered
+          , ConfirmWeightEntered
+          , ConfirmHighRiskConditionsEntered
+          , ConfirmMeasurementsObtained {
+
+  vars tabletApp, datastore, safetyBounds;
+
+  init state Start(tabletApp, datastore, safetyBounds) {
     entry {
-      patient = new Patient();
-      goto SepsisScreen;
+      this.tabletApp = tabletApp;
+      this.datastore = datastore;
+      this.safetyBounds   = safetyBounds;
+    }
+    on StartScreening do {
+      goto  ObtainAge;
     }
   }
-
-  state SepsisScreen {
+  state ObtainAge {
     entry {
-
-      var bucket1 = abnormalHeartRate() || abnormalBloodPressure() || abnormalPulseQuality();
-
-      var bucket2 = abnormalTemp();
-
-      var perfusion = abnormalCapillaryRefill() || abnormalSkinColor();
-      var bucket3   = abnormalMentalStatus()    || perfusion || highRiskConditions();
-
-      if (bucket1 || bucket2 || bucket3) {
-        print("Sepsis suspected\n");
-        broadcast stopEvent;
+      if (safetyBounds.age is undef) {
+        instruct(tabletApp, "Enter patient age");
       } else {
-        print("Continue triage\n");
-        broadcast stopEvent;
+        goto ObtainHighRiskConditions;
       }
     }
+    on ConfirmAgeEntered do {
+      goto ObtainHighRiskConditions;
+    }
+  }
+
+  state ObtainHighRiskConditions{
+    entry {
+      if (safetyBounds.highRiskConditions is undef) {
+        instruct(tableApp, "Enter high risk conditions");
+      } else {
+        goto ObtainMeasurements;
+      }
+    }
+    on ConfirmHighRiskConditionsEntered do {
+      goto ObtainMeasurements;
+    }
+  }
+
+  state ObtainMeasurements {
+    entry() {
+      instruct(app, "Obtain measurements");
+    }
+    on ConfirmMeasurementsObtained do {
+      goto calculatePSepsisScore;
+    }
+  }
+
+  fun isNormal(parameter, normalBounds) {
+    val storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(stored is undef)) {
+      return storedMeasurement in normalBounds;
+    } else {
+      return true;
+    }
+  }
+
+  state CalculateScore {
+    entry() {
+      hrAbnormal                 = !isNormal("hr",              safetyBounds.normalHR)
+      bpSysAbnormal              = !isNormal("bpSys",           safetyBounds.normalBPSys)
+      pulseQualityAbnormal       = !isNormal("pulseQuality",    safetyBounds.normalPulseQuality)
+      tempAbnormal               = !isNormal("temp",            safetyBounds.normalTemp)
+      mentalStatusAbnormal       = !isNormal("mentalStatus",    safetyBounds.normalMentalStatus)
+      capillaryRefillAbnormal    = !isNormal("capillaryRefill", safetyBounds.normalCapRefill)
+      skinColorAbnormal          = !isNormal("skinColor",       safetyBounds.normalSkinColor)
+      highRiskCondition          = !(size(safetyBounds.highRiskCondition) == 0)
+
+      var bucket1 = hrAbnormal || bpAbnormal || pqAbnormal;
+
+      var bucket2 = tempAbnormal;
+
+      var perfusion = capillaryRefillAbnormal || skinColorAbnormal;
+      var bucket3   = mentalStatusAbnormal    || prefusion || highRiskConditions;
+
+      var sepsisSuspected = bucket1 || bucket2 || bucket3
+      send tabletApp, DisplayDiagnosis, ( hrAbnormal
+                                        , bpSysAbnormal
+                                        , pulseQualitAbnormal
+                                        , tempAbnormal
+                                        , mentalStatusAbnormal
+                                        , capillaryRefillAbnormal
+                                        , skinColorAbnormal
+                                        , highRiskCondition)
+
+      if (sepsisSuspected) {
+        broadcast SepsisSuspected;
+      } else {
+        sleep(30);
+        goto ObtainMeasurements;
+      }
+    }
+  }
+}
+
+machine SepticShockScreening receives SepsisSuspected {
+  var safetyBounds;
+
+  fun lowerThanIfPresent(parameter, lowerBound) {
+    val storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(stored is undef)) {
+      return storedMeasurement < safetyBounds.parameter;
+    } else {
+      return true;
+    }
+  }
+
+  fun equalToIfPresent(parameter, upperBound) {
+    val storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(stored is undef)) {
+      return storedMeasurement > safetyBounds.parameter;
+    } else {
+      return true;
+    }
+  }
+
+  fun greaterThanIfPresent(parameter, upperBound) {
+    val storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(stored is undef)) {
+      return storedMeasurement > safetyBounds.parameter;
+    } else {
+      return true;
+    }
+  }
+
+  init state Start {
+    entry(safetyBounds) {
+      this.safetyBounds = safetyBounds;
+    }
+
+    on SepsisSuspected do {
+      var meanArterialPressureAbnormal = lowerThanIfPresent("meanArterialPressure", safetyBounds.normalMeanArterialPressure)
+
+      if (meanArterialPressureAbnormal) {
+        broadcast SepticShockSuspected;
+      } else {
+        if (   (obtainFrom(datastore, "ephinephrineDose")   > 5)
+            || (obtainFrom(datastore, "norepinephrineDose") > 5)
+            || (obtainFrom(datastore, "dopamineDose")       > 5) ) {
+          broadcast SepticShockSuspected;
+        }
+      } else {
+        var perfusion = 0;
+        if ( lowerThanIfPressent("baseExcess", -5)) {
+          perfusion = perfusion + 1;
+        }
+
+        if ( greaterThanIfPresent("lactate", 2 * safetyBounds.normalLactate)) {
+          perfusion = perfusion + 1;
+        }
+
+        if ( lessThanIfPresent("urineOutput", 0.5)) {
+          perfusion = perfusion + 1;
+        }
+
+        if ( equalToIfPresent("capillaryRefill", ">5s")) {
+          perfusion = perfusion + 1;
+        }
+        // Todo Implement
+
+        if (perfusion > 2) {
+          broadcast SepticShockSuspected;
+        }
+  }
+}
+
+interface TabletApp
+  receives  ConfirmAgeEntered
+          , ConfirmWeightEntered
+          , ConfirmHighRiskConditionsEntered { }
+
+interface Datastore {  }
+
+interface Sensors {  }
+
+init machine PSepsisGuidanceSystem receives StopGuidance {
+  var tabletApp     = createFromInterface(TabletApp);
+  var datastore     = createFromInterface(Datastore);
+  var safetyBounds  = new SafetyBounds();
+
+  init state CreateMachines {
+    entry {
+      instruct(tabletApp, "Enter Age and Weight");
+      new SepsisScreening(tabletApp, datastore, safetyBounds);
+      new AntibioticTherapy();
+      new SepsisScreening();
+      new FluidTherapy();
+      new SepticShockScreening();
+      new IonotropicSupportTherapy(); }
+
+    on StopGuidance do {
+      // savelog();
+    }
+
   }
 }
