@@ -175,7 +175,6 @@ module MEDIK
                 <activeInstances> ListItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
-                <output stream="stdout"> .List </output>
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
 ```
