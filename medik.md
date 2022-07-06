@@ -169,7 +169,7 @@ module MEDIK
                   <interface multiplicity="*" type="Map">
                     <interfaceName> . </interfaceName>
                     <interfaceDeclarations> nothing; </interfaceDeclarations>
-                    <interfaceReceiveEvents> . </interfaceReceiveEvents>
+                    <interfaceReceiveEvents> .Set </interfaceReceiveEvents>
                   </interface>
                 </interfaces>
                 <activeInstances> ListItem(0) </activeInstances>
@@ -700,6 +700,17 @@ it is unblocked before the switch occurs.
         <receiveEvents> SetItem(Event) ... </receiveEvents> ...
        </machine>
 
+
+  rule [[ getRecieversAux(Event | ListItem(Id) Rest) => ListItem(Id) getRecieversAux(Event | Rest) ]]
+       <instance>
+        <id> Id </id>
+        <class> Name </class> ...
+       </instance>
+       <interface>
+        <interfaceName> Name </interfaceName>
+        <interfaceReceiveEvents> SetItem(Event) ... </interfaceReceiveEvents> ...
+       </interface>
+
   rule getRecieversAux(_     | .List)            => .List
   rule getRecieversAux(Event | ListItem(_) Rest) => getRecieversAux(Event | Rest) [owise]
 
@@ -988,8 +999,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   syntax Exp  ::= "JSON2Exp"   "(" JSON ")"    [function]
   syntax Exps ::= "JSONs2Exps" "(" JSONs ")"   [function]
 
-  rule JSONs2Exps(J1:JSON , J2:JSON, Js:JSONs)
-    => JSON2Exp(J1) , JSON2Exp(J2) ,  JSONs2Exps(Js)
+  rule JSONs2Exps(J:JSON , Js:JSONs)
+    => JSON2Exp(J) , JSONs2Exps(Js)
 
   rule JSONs2Exps(.JSONs) => .Exps
 
