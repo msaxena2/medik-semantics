@@ -97,7 +97,7 @@ tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/mak
 # --------------------------------
 
 SEPSIS_DIR  := tests/sepsis
-SEPSIS_FILE := $(SEPSIS_DIR)/sepsis-screen.medik
+SEPSIS_FILE := $(SEPSIS_DIR)/psepsis.medik
 
 TEST_EXTERN_INPUT  := $(wildcard $(SEPSIS_DIR)/*.in.json)
 TEST_RUNNER_SCRIPT := $(CURDIR)/$(SEPSIS_DIR)/sepsis-extern
