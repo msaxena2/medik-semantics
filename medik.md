@@ -177,6 +177,7 @@ module MEDIK
                 <nextLoc> 1 </nextLoc>
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
+                <externInstanceId> . </externInstanceId> // Hack until k is fixed
 ```
 ### Macros
 
@@ -405,6 +406,7 @@ module MEDIK
                  </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
+       <externInstanceId> _ => Loc </externInstanceId>
 
 ```
 
@@ -1012,11 +1014,13 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         => jsonWrite(JSon, #stdout) ~> TId ...
        </k>
 
-  rule readExternInput => doRead  [priority(300)]
+  rule  readExternInput => doRead
 
-  rule <k> doRead
-        => processExternInput(jsonRead(#stdin)) ~> readExternInput ...
-       </k>
+  rule <instance>
+        <id> Id </id>
+        <k> doRead => processExternInput(jsonRead(#stdin)) ~> readExternInput ... </k> ...
+       </instance>
+       <externInstanceId> Id </externInstanceId>
        <foreignInstances> true </foreignInstances>  [priority(300)]
 
   rule processExternInput([J:JSON , Js:JSONs])
