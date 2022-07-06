@@ -132,8 +132,6 @@ machine MeasurementBounds
   }
 
   init state Running {
-    entry {
-    }
     on AgeEntered(age) do {
       this.age = age;
 
@@ -168,9 +166,9 @@ interface TabletApp
 interface Datastore {  }
 
 
+
 machine SepsisScreening
   receives  ConfirmAgeEntered
-          , StartScreening
           , ConfirmWeightEntered
           , ConfirmHighRiskConditionsEntered
           , ConfirmMeasurementsObtained {
@@ -296,6 +294,7 @@ init machine PSepsisGuidanceSystem receives StopGuidance {
   }
 }
 
+<<<<<<< HEAD
 machine SepticShockScreening receives SepsisSuspected {
   vars tabletApp, measurementBounds;
 
@@ -364,4 +363,6 @@ machine SepticShockScreening receives SepsisSuspected {
   var measurementBounds = new MeasurementsBounds();
 }
 
+=======
+>>>>>>> c47dc00 (rename tests/sepsis/sepsis-screen.medik => tests/sepsis/psepsis.medik)
 
