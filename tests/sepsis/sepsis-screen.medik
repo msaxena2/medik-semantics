@@ -24,6 +24,10 @@ machine MeasurementsBounds
     return 30 * age;
   }
 
+  fun years(age) {
+    return 365 * age;
+  }
+
   fun ageInYears(age) {
     return age / 365;
   }
@@ -31,7 +35,7 @@ machine MeasurementsBounds
   fun safeHRLowerBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 100;
-        interval(months(1), month(2))  : return 100;
+        interval(months(1), months(2)) : return 100;
         interval(months(2), years(1))  : return 90;
         interval(years(1),  years(2))  : return 80;
         interval(years(2),  years(4))  : return 70;
@@ -45,7 +49,7 @@ machine MeasurementsBounds
   fun safeHRUpperBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 205;
-        interval(months(1), month(2))  : return 205;
+        interval(months(1), months(2)) : return 205;
         interval(months(2), years(1))  : return 190;
         interval(years(1),  years(2))  : return 190;
         interval(years(2),  years(4))  : return 140;
@@ -59,7 +63,7 @@ machine MeasurementsBounds
   fun safeBpSysLowerBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 60;
-        interval(months(1), month(2))  : return 70;
+        interval(months(1), months(2)) : return 70;
         interval(months(2), years(1))  : return 70;
         interval(years(1),  years(2))  : return 70 + (ageInYears(age) * 2);
         interval(years(2),  years(4))  : return 70 + (ageInYears(age) * 2);
@@ -73,7 +77,7 @@ machine MeasurementsBounds
   fun safeBpSysUpperBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 180;
-        interval(months(1), month(2))  : return 180;
+        interval(months(1), months(2)) : return 180;
         interval(months(2), years(1))  : return 180;
         interval(years(1),  years(2))  : return 180;
         interval(years(2),  years(4))  : return 180;
@@ -87,7 +91,7 @@ machine MeasurementsBounds
   fun safeTempLowerBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 36;
-        interval(months(1), month(2))  : return 36;
+        interval(months(1), months(2)) : return 36;
         interval(months(2), years(1))  : return 36;
         interval(years(1),  years(2))  : return 36;
         interval(years(2),  years(4))  : return 36;
@@ -101,7 +105,7 @@ machine MeasurementsBounds
   fun safeTempUpperBound(age) {
     days(age) in {
         interval(days(0)  , months(1)) : return 38;
-        interval(months(1), month(2))  : return 38;
+        interval(months(1), months(2)) : return 38;
         interval(months(2), years(1))  : return 39;
         interval(years(1),  years(2))  : return 39;
         interval(years(2),  years(4))  : return 39;
@@ -113,8 +117,6 @@ machine MeasurementsBounds
   }
 
   init state Running {
-    entry {
-    }
     on AgeEntered(age) do {
       this.age = age;
 
@@ -133,12 +135,12 @@ machine MeasurementsBounds
   }
 }
 
-//interface TabletApp
-//  receives  ConfirmAgeEntered
-//          , ConfirmWeightEntered
-//          , ConfirmHighRiskConditionsEntered { }
-//
-//interface Datastore {  }
+interface TabletApp
+  receives  ConfirmAgeEntered
+          , ConfirmWeightEntered
+          , ConfirmHighRiskConditionsEntered { }
+
+interface Datastore {  }
 //
 //interface Sensors {  }
 
@@ -250,9 +252,18 @@ machine SepsisScreening
 
 
 init machine PSepsisGuidanceSystem receives StopGuidance {
-  var tabletApp     = createFromInterface(TabletApp, "tablet");
-  var datastore     = createFromInterface(Datastore, "datastore");
-  var measurementBounds = new MeasurementsBounds();
+  vars tabletApp, datastore, measurementsBounds;
+  //var tabletApp     = createFromInterface(TabletApp, "tablet");
+  //var datastore     = createFromInterface(Datastore, "datastore");
+  //var measurementBounds = new MeasurementsBounds();
+
+  init state CreateMachines {
+    entry {
+      tabletApp = createFromInterface(TabletApp, "tabletApp");
+      datastore = createFromInterface(Datastore, "datastore");
+      measurementsBounds = new MeasurementsBounds();
+    }
+  }
 
   //init state CreateMachines {
   //  entry {
