@@ -1,0 +1,27 @@
+[
+  {
+    "id": "tabletApp",
+    "action": "broadcast",
+    "eventName": "StartScreening",
+    "eventArgs": []
+  },
+  {
+    "id": "tabletApp",
+    "action": "broadcast",
+    "eventName": "AgeEntered",
+    "eventArgs": [
+      50
+    ]
+  },
+  {
+    "id": "tabletApp",
+    "action": "broadcast",
+    "eventName": "HighRiskConditionsEntered",
+    "eventArgs": [
+      2
+    ]
+  },
+  {
+    "action": "exit"
+  }
+]
