@@ -520,6 +520,12 @@ module MEDIK
   rule B1 == B2 => B1 ==Bool B2
 
   rule undef == undef => true
+
+  rule X == undef => false
+    requires X =/=K undef
+
+  rule undef == X => false
+    requires X =/=K undef
 ```
 
 #### Instance creation via new
@@ -1028,7 +1034,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   rule processExternInput([ .JSONs ]) => .
 
-  rule processExternInput({ "action" : "exit" , _:JSONs })~> _ => .
+  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _ => . </k>
 
   syntax KItem ::= "doRead"
 
