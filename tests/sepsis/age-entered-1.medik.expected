@@ -1,1 +1,7 @@
-{"id":"tabletApp","tid":1,"interface":"TabletApp","name":"ConfirmAgeEntered","args":[]}
+{
+  "id": "tabletApp",
+  "tid" :1,
+  "interface": "TabletApp",
+  "name": "ConfirmAgeEntered",
+  "args": []
+}
