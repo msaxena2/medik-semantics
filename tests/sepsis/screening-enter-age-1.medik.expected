@@ -1,0 +1,31 @@
+{
+  "id": "tabletApp",
+  "tid": 1 ,
+  "interface": "TabletApp",
+  "name": "Instruct",
+  "args": [
+    "Enter patient age"
+  ]
+}
+{
+  "id": "tabletApp",
+  "tid": 2 ,
+  "interface": "TabletApp",
+  "name": "ConfirmAgeEntered",
+  "args": []
+}
+{
+  "id": "tabletApp",
+  "tid": 3 ,
+  "interface": "TabletApp",
+  "name": "Instruct",
+  "args": [
+    "Enter high risk conditions"
+  ]
+}
+{ "id": "tabletApp",
+  "tid": 1,
+  "interface": "TabletApp",
+  "name": "ConfirmHighRiskConditionsEntered"
+  "args": []
+}
