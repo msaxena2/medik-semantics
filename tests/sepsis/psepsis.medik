@@ -119,6 +119,18 @@ machine MeasurementBounds
     }
   }
 
+  fun safeMapLowerBound(age) {
+    days(age) in {
+      interval(days(0), months(1))       : return 46
+      interval(months(0), months(12))    : return 55
+      interval(months(12), months(24))   : return 60
+      interval(months(24), months(60))   : return 62
+      interval(months(60), months(144))  : return 65
+      interval(months(144), months(216)) : return 67
+      default                            : return 70
+    }
+  }
+
   init state Running {
     on AgeEntered(age) do {
       this.age = age;
@@ -131,6 +143,8 @@ machine MeasurementBounds
 
       this.tempLowerBound  = safeTempLowerBound(age);
       this.tempUpperBound  = safeTempUpperBound(age);
+
+      this.mapLowerBound   = safeMapLowerBound(age);
 
       broadcast ConfirmAgeEntered;
       goto Running;
@@ -150,8 +164,6 @@ interface TabletApp
           , ConfirmHighRiskConditionsEntered { }
 
 interface Datastore {  }
-//
-//interface Sensors {  }
 
 machine SepsisScreening
   receives  ConfirmAgeEntered
@@ -211,13 +223,6 @@ machine SepsisScreening
     }
   }
 
-  state CalculatePSepsisScore {
-    entry{
-      print("Came to calculate score\n");
-      exit;
-    }
-  }
-
   fun isInNormalRange(parameter, normalLowerBound, normalUpperBound) {
     var storedMeasurement = obtainFrom(datastore, parameter);
     if (!(storedMeasurement == undef)) {
@@ -239,7 +244,6 @@ machine SepsisScreening
 
   state CalculateScore {
     entry() {
-      print("Calculating score");
       var hrAbnormal              = !isInNormalRange("hr",          measurementBounds.hrLowerBound,    measurementBounds.hrUpperBound);
       var bpSysAbnormal           = !isInNormalRange("bpSys",       measurementBounds.bpSysLowerBound, measurementBounds.bpSysUpperBound);
       var tempAbnormal            = !isInNormalRange("temp",        measurementBounds.tempLowerBound,  measurementBounds.tempUpperBound);
@@ -258,7 +262,6 @@ machine SepsisScreening
 
       var sepsisSuspected = bucket1 || bucket2 || bucket3;
       send tabletApp, DisplayDiagnosis, ( sepsisSuspected );
-      stop;
 
       if (sepsisSuspected) {
         broadcast SepsisSuspected;
@@ -280,72 +283,77 @@ init machine PSepsisGuidanceSystem receives StopGuidance {
       datastore = createFromInterface(Datastore, "datastore");
       measurementBounds = new MeasurementBounds();
       new SepsisScreening(tabletApp, datastore, measurementBounds);
-      //new SepticShockScreening(
+      new SepticShockScreening(tabletApp, measurementBounds);
+
+      /** Todo: Finish implementation of remaining machines
+      new FluidTherapy();
+      new IonotropicSupportTherapy();
+      */
+    }
+  }
+}
+
+machine SepticShockScreening receives SepsisSuspected {
+  vars tabletApp, measurementBounds;
+
+  init state Start {
+    entry(tabletApp, measurementBounds) {
+      this.tabletApp         = tabletApp;
+      this.measurementBounds = measurementBounds;
+    }
+
+    on SepsisSuspected do {
+      goto ObtainMeasurements;
     }
   }
 
-  //init state CreateMachines {
-  //  entry {
-  //    send tabletApp, Instruct, ("Enter Age and Weight");
-  //    //new SepsisScreening(tabletApp, datastore, measurementBounds);
-  //    //new AntibioticTherapy();
-  //    //new SepsisScreening();
-  //    //new FluidTherapy();
-  //    //new SepticShockScreening();
-  //    //new IonotropicSupportTherapy(); }
+  state ObtainMeasurements {
+    entry {
+      send tabletApp, Instruct, ("Obtain Measurements");
+    }
 
-  //  on StopGuidance do {
-  //    // savelog();
-  //  }
+    on ConfirmMeasurementsObtained do {
+      goto CalculateSepticShockScore;
+    }
+  }
 
-  //}
+  state CalculateSepticShockScore {
+    entry {
+    }
+  }
+
+  /**
+     var meanArterialPressureAbnormal = isLowerThan("meanArterialPressure", measurementBounds.normalMeanArterialPressure)
+
+      if (meanArterialPressureAbnormal) {
+        broadcast SepticShockSuspected;
+      } else {
+        if (   (obtainFrom(datastore, "ephinephrineDose")   > 5)
+            || (obtainFrom(datastore, "norepinephrineDose") > 5)
+            || (obtainFrom(datastore, "dopamineDose")       > 5) ) {
+          broadcast SepticShockSuspected;
+        }
+      } else {
+        var perfusion = 0;
+        if ( lowerThanIfPressent("baseExcess", -5)) {
+          perfusion = perfusion + 1;
+        }
+
+        if ( greaterThanIfPresent("lactate", 2 * measurementBounds.normalLactate)) {
+          perfusion = perfusion + 1;
+        }
+
+        if ( lessThanIfPresent("urineOutput", 0.5)) {
+          perfusion = perfusion + 1;
+        }
+
+        if ( equalToIfPresent("capillaryRefill", ">5s")) {
+          perfusion = perfusion + 1;
+        }
+
+        if (perfusion > 2) {
+          broadcast SepticShockSuspected;
+        }
+    }
+    */
 }
-
-//machine SepticShockScreening receives SepsisSuspected {
-//  var measurementBounds;
-//
-//  init state Start {
-//    entry(measurementBounds) {
-//      this.measurementBounds = measurementBounds;
-//    }
-//
-//    on SepsisSuspected do {
-//    //  var meanArterialPressureAbnormal = lowerThanIfPresent("meanArterialPressure", measurementBounds.normalMeanArterialPressure)
-//
-//    //  if (meanArterialPressureAbnormal) {
-//    //    broadcast SepticShockSuspected;
-//    //  } else {
-//    //    if (   (obtainFrom(datastore, "ephinephrineDose")   > 5)
-//    //        || (obtainFrom(datastore, "norepinephrineDose") > 5)
-//    //        || (obtainFrom(datastore, "dopamineDose")       > 5) ) {
-//    //      broadcast SepticShockSuspected;
-//    //    }
-//    //  } else {
-//    //    var perfusion = 0;
-//    //    if ( lowerThanIfPressent("baseExcess", -5)) {
-//    //      perfusion = perfusion + 1;
-//    //    }
-//
-//    //    if ( greaterThanIfPresent("lactate", 2 * measurementBounds.normalLactate)) {
-//    //      perfusion = perfusion + 1;
-//    //    }
-//
-//    //    if ( lessThanIfPresent("urineOutput", 0.5)) {
-//    //      perfusion = perfusion + 1;
-//    //    }
-//
-//    //    if ( equalToIfPresent("capillaryRefill", ">5s")) {
-//    //      perfusion = perfusion + 1;
-//    //    }
-//    //    // Todo Implement
-//
-//    //    if (perfusion > 2) {
-//    //      broadcast SepticShockSuspected;
-//    //    }
-//  }
-//}
-//
-//machine AntiboiticTherapy {
-//
-//}
-
