@@ -1,1 +1,11 @@
-[{"id":"tabletApp","action":"broadcast","eventName":"StartScreening","eventArgs":[]},{"action":"exit"}]
+[
+  {
+    "id": "tabletApp",
+    "action": "broadcast",
+    "eventName": "StartScreening",
+    "eventArgs": []
+  },
+  {
+    "action": "exit"
+  }
+]
