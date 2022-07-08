@@ -96,8 +96,8 @@ tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/mak
 # Sepsis Screening Guideline Tests
 # --------------------------------
 
-SEPSIS_DIR  := tests/sepsis
-SEPSIS_FILE := $(SEPSIS_DIR)/psepsis.medik
+SEPSIS_DIR    := tests/sepsis
+SEPSIS_FILE   := $(SEPSIS_DIR)/psepsis.medik
 
 TEST_EXTERN_INPUT  := $(wildcard $(SEPSIS_DIR)/*.in.json)
 TEST_RUNNER_SCRIPT := $(CURDIR)/$(SEPSIS_DIR)/sepsis-extern
@@ -107,7 +107,7 @@ tests-sepsis: $(patsubst $(SEPSIS_DIR)/%.in.json, $(SEPSIS_DIR)/%.medik.run, $(T
 
 $(SEPSIS_DIR)/%.medik.run: $(SEPSIS_DIR)/%.in.json $(SEPSIS_DIR)/%.medik.expected $(SEPSIS_FILE) $(LLVM_KOMPILED_DIR)/make.timestamp
 	@printf '%-50s %s' "$< " "... "
-	@krun --output none -d $(LLVM_KOMPILED_DIR) $(SEPSIS_FILE) < $< > $@
+	@krun -d $(LLVM_KOMPILED_DIR) --output none $(SEPSIS_FILE) < $< | jq -M > $@
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
