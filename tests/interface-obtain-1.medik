@@ -4,7 +4,7 @@ init machine Tests {
   init state Start {
     entry {
       var externalSrc = createFromInterface(External, "ex1");
-      var hr = obtainFrom(externalSrc);
+      var hr = obtainFrom(externalSrc, "hr");
       // should print 72
       print(hr);
     }
