@@ -84,11 +84,18 @@ async def interact(k_process, in_file=None):
     read_out_task.add_done_callback(kill_tasks)
     read_out_task.add_done_callback(tasks.discard)
 
+    skip = False
+
     while use_stdin or sent_index < len(in_messages):
-        if not use_stdin:
+        if ((not use_stdin) and (not skip)) or in_messages[sent_index].get('action') == 'exit':
             k_process.stdin.write(json.dumps(in_messages[sent_index]).encode('utf-8'))
+            logging.info('send {} to k'.format(json.dumps(in_messages[sent_index], indent=2)))
             await k_process.stdin.drain()
             sent_index = sent_index + 1
+        elif skip:
+            print('skipped')
+            skip = False
+            continue
         else:
             from_stdin = json.loads(input("to-k?>"))
             k_process.stdin.write(json.dumps(from_stdin).encode('utf-8'))
@@ -110,6 +117,8 @@ async def interact(k_process, in_file=None):
                 do_exit()
                 break
             case _:
+                if from_k.get('name').startswith('Confirm'):
+                    skip=True
                 print(json.dumps(from_k, indent=2))
 
 
