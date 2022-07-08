@@ -47,7 +47,7 @@ module MEDIK-SYNTAX
                | "sleep" "(" Exp ")"                         [strict(1)]
                | "new" Id "(" Exps ")"                       [strict(2)]
                | "send" Exp "," Id                           [strict(1)]
-               | "send" Exp "," Id "," "(" Exps ")"          [strict(1)]
+               | "send" Exp "," Id "," "(" Exps ")"          [strict(1, 3)]
                | Exp "in" Exp
                | "interval" "(" Exp "," Exp ")"              [strict]
                | "broadcast" Id                              [broadcast]
@@ -883,6 +883,7 @@ source at runtime.
 
   rule Exp2JSON(S:String) => S
   rule Exp2JSON(I:Int)    => I
+  rule Exp2JSON(B:Bool)   => B
   rule Exp2JSON(undef)    => "undef"
 
   rule [[ Exp2JSON(instance(Id)) => { Obj2JSONs(GEnv) } ]]
