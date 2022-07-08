@@ -57,7 +57,7 @@ module MEDIK-SYNTAX
                | "print" "(" Exp ")"                         [strict]
                | "createFromInterface" "(" Id "," String ")" [strict(2)]
                | "parseInt" "(" Exp ")"                      [strict]
-               | "return"
+               > "return"
                | "return" Exp                                [strict(1)]
                > Exp "=" Exp                                 [strict(2)]
                > "var" Id
