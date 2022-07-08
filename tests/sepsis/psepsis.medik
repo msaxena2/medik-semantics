@@ -369,13 +369,66 @@ machine SepticShockScreening receives SepsisSuspected {
       send tabletApp, Instruct, ("Obtain measurements");
     }
     on ConfirmMeasurementsObtained do {
-      goto CalculatePSepsisScore;
+      goto CalculateScore;
     }
   }
 
   state CalculatePSepsisScore {
-    print("Came to calculate score");
-    exit;
+    entry{
+      print("Came to calculate score\n");
+      exit;
+    }
+  }
+
+  fun isInNormalRange(parameter, normalLowerBound, normalUpperBound) {
+    var storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(storedMeasurement == undef)) {
+      return ((storedMeasurement >= normalLowerBound) && (storedMeasurement < normalUpperBound));
+    } else {
+      return true;
+    }
+  }
+
+  fun isNormal(parameter, normalMeasurement) {
+    var storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(storedMeasurement == undef)) {
+      return storedMeasurement == normalMeasurement;
+    } else {
+      return true;
+    }
+  }
+
+
+  state CalculateScore {
+    entry() {
+      print("Calculating score");
+      var hrAbnormal              = !isInNormalRange("hr",          measurementBounds.hrLowerBound,    measurementBounds.hrUpperBound);
+      var bpSysAbnormal           = !isInNormalRange("bpSys",       measurementBounds.bpSysLowerBound, measurementBounds.bpSysUpperBound);
+      var tempAbnormal            = !isInNormalRange("temp",        measurementBounds.tempLowerBound,  measurementBounds.tempUpperBound);
+      var pulseQualityAbnormal    = !isNormal("pulseQuality",       measurementBounds.pulseQuality);
+      var mentalStatusAbnormal    = !isNormal("mentalStatus",       measurementBounds.mentalStatus);
+      var capillaryRefillAbnormal = !isNormal("capillaryRefill",    measurementBounds.capillaryRefill);
+      var skinColorAbnormal       = !isNormal("skinColor",          measurementBounds.skinColor);
+      var highRiskConditions      = !isNormal("highRiskConditions", measurementBounds.highRiskConditions);
+
+      var bucket1 = hrAbnormal || bpAbnormal || pqAbnormal;
+
+      var bucket2 = tempAbnormal;
+
+      var perfusion = capillaryRefillAbnormal || skinColorAbnormal;
+      var bucket3   = mentalStatusAbnormal    || prefusion || highRiskConditions;
+
+      var sepsisSuspected = bucket1 || bucket2 || bucket3;
+      send tabletApp, DisplayDiagnosis, ( { "hrAbnormal"              : hrAbnormal
+                                          , "bpSysAbnormal"           : bpSysAbnormal
+                                          , "pulseQualitAbnormal"     : pulseQualityAbnormal
+                                          , "tempAbnormal"            : tempAbnormal
+                                          , "mentalStatusAbnormal"    : mentalStatusAbnormal
+                                          , "capillaryRefillAbnormal" : capillaryRefillAbnormal
+                                          , "skinColorAbnormal"       : skinColorAbnormal
+                                          , "highRiskConditions"      : highRiskConditions });
+
+    }
   }
 }
 
