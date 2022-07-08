@@ -26,7 +26,7 @@ module MEDIK-SYNTAX
                | String
                | UndefExp
                | ThisExp
-               | "obtainFrom" "(" Exp ")"
+               | "obtainFrom" "(" Exp "," Exp ")"            [strict]
                | "yield"
                | "exit"
                | "(" Exp ")"                                 [bracket]
@@ -59,7 +59,7 @@ module MEDIK-SYNTAX
                | "parseInt" "(" Exp ")"                      [strict]
                | "return"
                | "return" Exp                                [strict(1)]
-               > Exp "=" Exp
+               > Exp "=" Exp                                 [strict(2)]
                > "var" Id
                | "vars" Ids
                | "var" Exp "=" Exp
@@ -840,30 +840,16 @@ The `obtainFrom` keyword provides a mechanism in medik to fetch values from an e
 source at runtime.
 
 ```k
-  syntax Bool ::= "isObtainExp" "(" Exp ")" [function]
+  syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
 
-  rule isObtainExp(obtainFrom(_)) => true
-  rule isObtainExp(_)             => false [owise]
-
-  context _ = HOLE:Exp
-    requires notBool(isObtainExp(HOLE))
-
-  syntax KItem ::= "sendObtainMessage"     "(" Exp "|" String ")" [strict(1)]
-                 | "waitForObtainResponse" "(" Exp ")"
-
-  // Todo: Using the "send" construct directly crashes the LLVM backend
-  rule I:Id                  = obtainFrom(E:Exp) => sendObtainMessage(E | Id2String(I)) ~> waitForObtainResponse(I)
-  rule ( _ . I:Id  #as LHS ) = obtainFrom(E:Exp) => sendObtainMessage(E | Id2String(I)) ~> waitForObtainResponse(LHS)
-
-  rule <instance>
-        <k> sendObtainMessage( instance(Id:Int) | FName:String )
-         => doWrite( { "id"        : FId
-                     , "tid"       : TId
-                     , "interface" : Exp2JSON(IName)
-                     , "name"      : "Obtain"
-                     , "args"      : [ FName , .JSONs ] } | TId ) ...
-        </k> ...
-       </instance>
+  rule <k> obtainFrom(instance(Id:Int), Field:String)
+        =>   jsonWrite( { "id"        : FId
+                        , "tid"       : TId
+                        , "interface" : Exp2JSON(IName)
+                        , "name"      : "Obtain"
+                        , "args"      : [ Field , .JSONs ] }, #stdout)
+          ~> waitForObtainResponse(TId) ...
+       </k>
        <instance>
         <id> Id </id>
         <class> IName </class>
@@ -979,14 +965,12 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInstances> _ => true </foreignInstances>
 
 
-  syntax KItem ::=  "doWrite" "(" JSON "|" Int ")"
-
   rule <k> send instance(Id) , EventName:Id , ( Args )
-        => doWrite( { "id"        : FId
-                    , "tid"       : TId
-                    , "interface" : Exp2JSON(IName)
-                    , "name"      : Exp2JSON(EventName)
-                    , "args"      : [Exps2JSONs(Args)] } | TId ) ...
+        => jsonWrite( { "id"        : FId
+                      , "tid"       : TId
+                      , "interface" : Exp2JSON(IName)
+                      , "name"      : Exp2JSON(EventName)
+                      , "args"      : [Exps2JSONs(Args)] }, #stdout) ~> done ...
        </k>
        <instance>
         <id> Id </id>
@@ -1016,10 +1000,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp(S:String)    => S
   rule JSON2Exp({ _ } #as J) => constructObj(J)
 
-  rule <k> doWrite(JSon | TId )
-        => jsonWrite(JSon, #stdout) ~> TId ...
-       </k>
-
   rule  readExternInput => doRead
 
   rule <instance>
@@ -1034,7 +1014,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   rule processExternInput([ .JSONs ]) => .
 
-  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _ => . </k>
+  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => done </k>
+
 
   syntax KItem ::= "doRead"
 
@@ -1073,14 +1054,14 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 
   rule  <instance>
-          <k> processExternInput({ "tid"       : TId
+          <k> processExternInput({ "tid"       : TId:Int
                                  , "id"        : _:String
                                  , "result"    : "obtainResponse"
                                  , "args"      : Val:JSON , _:JSONs  }) => . ...
           </k> ...
        </instance>
        <instance>
-        <k> TId ~> waitForObtainResponse(LHS) => LHS = JSON2Exp(Val) ... </k> ...
+        <k> waitForObtainResponse(TId) => Val ... </k> ...
        </instance>
 
 ```
