@@ -13,8 +13,11 @@ machine MeasurementBounds
      , lactateUpperBound     , lactateLowerBound
      , urineOutputUpperBound , urineOutputLowerBound;
 
-  vars pulseQuality, capillaryRefill, skinColor, mentalStatus, highRiskConditions;
-
+  var pulseQuality       = "normal";
+  var capillaryRefill    = "1ms";
+  var skinColor          = "normal";
+  var mentalStatus       = "normal";
+  var highRiskConditions = 0;
 
   fun days(age) {
     return age;
@@ -127,7 +130,7 @@ machine MeasurementBounds
       this.bpSysUpperBound = safeBpSysUpperBound(age);
 
       this.tempLowerBound  = safeTempLowerBound(age);
-      this.tempLowerBound  = safeTempUpperBound(age);
+      this.tempUpperBound  = safeTempUpperBound(age);
 
       broadcast ConfirmAgeEntered;
       goto Running;
@@ -201,63 +204,76 @@ machine SepsisScreening
 
   state ObtainMeasurements {
     entry {
-      send tabletApp, Instruct, ("Obtain measurements");
+      send tabletApp, Instruct, ("Obtain Measurements");
     }
     on ConfirmMeasurementsObtained do {
-      goto CalculatePSepsisScore;
+      goto CalculateScore;
     }
   }
 
   state CalculatePSepsisScore {
-    print("Came to calculate score");
-    exit;
+    entry{
+      print("Came to calculate score\n");
+      exit;
+    }
   }
 
-  //fun isNormal(parameter, normalBounds) {
-  //  val storedMeasurement = obtainFrom(datastore, parameter);
-  //  if (!(stored == undef)) {
-  //    return storedMeasurement in normalBounds;
-  //  } else {
-  //    return true;
-  //  }
-  //}
+  fun isInNormalRange(parameter, normalLowerBound, normalUpperBound) {
+    var storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(storedMeasurement == undef)) {
+      return ((storedMeasurement >= normalLowerBound) && (storedMeasurement < normalUpperBound));
+    } else {
+      return true;
+    }
+  }
 
-  //state CalculateScore {
-  //  entry() {
-  //    hrAbnormal                 = !isNormal("hr",              measurementBounds.normalHR)
-  //    bpSysAbnormal              = !isNormal("bpSys",           measurementBounds.normalBPSys)
-  //    pulseQualityAbnormal       = !isNormal("pulseQuality",    measurementBounds.normalPulseQuality)
-  //    tempAbnormal               = !isNormal("temp",            measurementBounds.normalTemp)
-  //    mentalStatusAbnormal       = !isNormal("mentalStatus",    measurementBounds.normalMentalStatus)
-  //    capillaryRefillAbnormal    = !isNormal("capillaryRefill", measurementBounds.normalCapRefill)
-  //    skinColorAbnormal          = !isNormal("skinColor",       measurementBounds.normalSkinColor)
-  //    highRiskCondition          = !(size(measurementBounds.highRiskCondition) == 0)
+  fun isNormal(parameter, normalMeasurement) {
+    var storedMeasurement = obtainFrom(datastore, parameter);
+    if (!(storedMeasurement == undef)) {
+      return storedMeasurement == normalMeasurement;
+    } else {
+      return true;
+    }
+  }
 
-  //    var bucket1 = hrAbnormal || bpAbnormal || pqAbnormal;
 
-  //    var bucket2 = tempAbnormal;
+  state CalculateScore {
+    entry() {
+      print("Calculating score");
+      var hrAbnormal              = !isInNormalRange("hr",          measurementBounds.hrLowerBound,    measurementBounds.hrUpperBound);
+      var bpSysAbnormal           = !isInNormalRange("bpSys",       measurementBounds.bpSysLowerBound, measurementBounds.bpSysUpperBound);
+      var tempAbnormal            = !isInNormalRange("temp",        measurementBounds.tempLowerBound,  measurementBounds.tempUpperBound);
+      var pulseQualityAbnormal    = !isNormal("pulseQuality",       measurementBounds.pulseQuality);
+      var mentalStatusAbnormal    = !isNormal("mentalStatus",       measurementBounds.mentalStatus);
+      var capillaryRefillAbnormal = !isNormal("capillaryRefill",    measurementBounds.capillaryRefill);
+      var skinColorAbnormal       = !isNormal("skinColor",          measurementBounds.skinColor);
+      var highRiskConditions      = !isNormal("highRiskConditions", measurementBounds.highRiskConditions);
 
-  //    var perfusion = capillaryRefillAbnormal || skinColorAbnormal;
-  //    var bucket3   = mentalStatusAbnormal    || prefusion || highRiskConditions;
+      var bucket1 = hrAbnormal || bpAbnormal || pqAbnormal;
 
-  //    var sepsisSuspected = bucket1 || bucket2 || bucket3
-  //    send tabletApp, DisplayDiagnosis, ( hrAbnormal
-  //                                      , bpSysAbnormal
-  //                                      , pulseQualitAbnormal
-  //                                      , tempAbnormal
-  //                                      , mentalStatusAbnormal
-  //                                      , capillaryRefillAbnormal
-  //                                      , skinColorAbnormal
-  //                                      , highRiskCondition)
+      var bucket2 = tempAbnormal;
 
-  //    if (sepsisSuspected) {
-  //      broadcast SepsisSuspected;
-  //    } else {
-  //      sleep(30);
-  //      goto ObtainMeasurements;
-  //    }
-  //  }
-  //}
+      var perfusion = capillaryRefillAbnormal || skinColorAbnormal;
+      var bucket3   = mentalStatusAbnormal    || prefusion || highRiskConditions;
+
+      var sepsisSuspected = bucket1 || bucket2 || bucket3;
+      send tabletApp, DisplayDiagnosis, ( { "hrAbnormal"              : hrAbnormal
+                                          , "bpSysAbnormal"           : bpSysAbnormal
+                                          , "pulseQualitAbnormal"     : pulseQualityAbnormal
+                                          , "tempAbnormal"            : tempAbnormal
+                                          , "mentalStatusAbnormal"    : mentalStatusAbnormal
+                                          , "capillaryRefillAbnormal" : capillaryRefillAbnormal
+                                          , "skinColorAbnormal"       : skinColorAbnormal
+                                          , "highRiskConditions"      : highRiskConditions });
+
+      //if (sepsisSuspected) {
+      //  broadcast SepsisSuspected;
+      //} else {
+      //  sleep(30);
+      //  goto ObtainMeasurements;
+      //}
+    }
+  }
 }
 
 
