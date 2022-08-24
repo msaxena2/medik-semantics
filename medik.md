@@ -1054,6 +1054,13 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        </instance>
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 
+  syntax KItem ::= JSON2Val(JSON) [function]
+
+  rule JSON2Val(I:Int)    => I
+  rule JSON2Val(B:Bool)   => B
+  rule JSON2Val(S:String) => S
+  rule JSON2Val(null)     => undef
+
   rule  <instance>
           <k> processExternInput({ "tid"       : TId:Int
                                  , "id"        : _:String
@@ -1062,9 +1069,8 @@ machines*, i.e. machines with transition systems *external* to the MediK program
           </k> ...
        </instance>
        <instance>
-        <k> waitForObtainResponse(TId) => Val ... </k> ...
+        <k> waitForObtainResponse(TId) => JSON2Val(Val) ... </k> ...
        </instance>
-
 ```
 #### Timer Hooks
 
