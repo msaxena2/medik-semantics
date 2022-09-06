@@ -169,6 +169,7 @@ interface Datastore {  }
 
 machine SepsisScreening
   receives  ConfirmAgeEntered
+          , StartScreening
           , ConfirmWeightEntered
           , ConfirmHighRiskConditionsEntered
           , ConfirmMeasurementsObtained {
@@ -294,7 +295,6 @@ init machine PSepsisGuidanceSystem receives StopGuidance {
   }
 }
 
-<<<<<<< HEAD
 machine SepticShockScreening receives SepsisSuspected {
   vars tabletApp, measurementBounds;
 
@@ -363,6 +363,32 @@ machine SepticShockScreening receives SepsisSuspected {
   var measurementBounds = new MeasurementsBounds();
 }
 
-=======
->>>>>>> c47dc00 (rename tests/sepsis/sepsis-screen.medik => tests/sepsis/psepsis.medik)
 
+  state ObtainMeasurements {
+    entry {
+      send tabletApp, Instruct, ("Obtain measurements");
+    }
+    on ConfirmMeasurementsObtained do {
+      goto CalculatePSepsisScore;
+    }
+  }
+
+  state CalculatePSepsisScore {
+    print("Came to calculate score");
+    exit;
+  }
+}
+
+
+init machine PSepsisGuidanceSystem receives StopGuidance {
+  vars tabletApp, datastore, measurementBounds;
+
+  init state CreateMachines {
+    entry {
+      tabletApp = createFromInterface(TabletApp, "tabletApp");
+      datastore = createFromInterface(Datastore, "datastore");
+      measurementBounds = new MeasurementBounds();
+      new SepsisScreening(tabletApp, datastore, measurementBounds);
+    }
+  }
+}
