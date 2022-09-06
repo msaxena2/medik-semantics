@@ -1,9 +1,0 @@
-{
-  "id": "tabletApp",
-  "tid": 1,
-  "interface": "TabletApp",
-  "name": "Instruct",
-  "args": [
-    "Enter patient age"
-  ]
-}
