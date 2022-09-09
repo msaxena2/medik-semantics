@@ -1,0 +1,8 @@
+init machine FloatArith {
+  init state Start {
+    entry {
+      var c = 1 + 2.0;
+      print(c);
+    }
+  }
+}
