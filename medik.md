@@ -9,7 +9,6 @@ requires "json.md"
 
 module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
-  imports FLOAT-SYNTAX
 
   syntax Ids ::= List{Id, ","}    [ids]
 
@@ -23,7 +22,6 @@ module MEDIK-SYNTAX
 
   syntax Exp ::= Id
                | Int
-               | Float
                | Bool
                | String
                | UndefExp
@@ -108,9 +106,8 @@ module MEDIK
   imports DOMAINS
   imports JSON
   imports K-REFLECTION
-  imports FLOAT
 
-  syntax Val ::= "null" | "nothing" | Int | Float | Bool | String | UndefExp
+  syntax Val ::= "null" | "nothing" | Int | Bool | String | UndefExp
   syntax Exp ::= Val
   syntax Exps ::= Vals
 
@@ -479,42 +476,16 @@ module MEDIK
 
 #### Arithmetic Expressions
 ```k
-  rule I1:Int + I2:Int => I1 +Int I2
-  rule I1:Int - I2:Int => I1 -Int I2
-  rule I1:Int * I2:Int => I1 *Int I2
-  rule I1:Int / I2:Int => I1 /Int I2
-    requires notBool (I2 ==Int 0)
-
-  rule F1:Float + F2:Float => F1 +Float F2
-  rule F1:Float - F2:Float => F1 -Float F2
-  rule F1:Float * F2:Float => F1 *Float F2
-  rule F1:Float / F2:Float => F1 /Float F2
-    requires notBool (F2 ==Float 0.)
-
-  rule _ / 0  => undef
-  rule I:Int   + F:Float => Int2Float(I, 53, 11) +Float F
-  rule F:Float + I:Int   => Int2Float(I, 53, 11) +Float F
-
-  rule I:Int   - F:Float => Int2Float(I, 53, 11) -Float F
-  rule F:Float - I:Int   => Int2Float(I, 53, 11) -Float F
-
-  rule I:Int   * F:Float => Int2Float(I, 53, 11) *Float F
-  rule F:Float * I:Int   => Int2Float(I, 53, 11) *Float F
-
-  rule I:Int / F:Float => Int2Float(I, 53, 11) /Float F
-    requires notBool (F ==Float 0.0)
-
-  rule F:Float / I:Int =>  F /Float Int2Float(I, 53, 11)
-    requires notBool (I ==Int 0)
-
-  rule _ / 0. => undef
-
+  rule I1 + I2 => I1 +Int I2
+  rule I1 - I2 => I1 -Int I2
+  rule I1 * I2 => I1 *Int I2
+  rule I1 / I2 => I1 /Int I2
+    requires I2 =/=K 0
+  rule _ / 0 => undef
 
   rule S1       + S2       => S1 +String S2
   rule S:String + I:Int    => S +String Int2String(I)
   rule I:Int    + S:String => Int2String(I) +String S
-  rule S:String + F:Float  => S +String Float2String(F)
-  rule F:Float  + S:String => Float2String(F) +String S
   rule S:String + true     => S +String "true"
   rule S:String + false    => S +String "false"
   rule true     + S:String => "true" +String S
@@ -530,23 +501,11 @@ module MEDIK
 #### Boolean Expressions
 
 ```k
-  rule I1:Int < I2:Int => I1 <Int I2
-  rule I1:Int > I2:Int => I1 >Int I2
+  rule I1 < I2 => I1 <Int I2
+  rule I1 > I2 => I1 >Int I2
 
-  rule I1:Int <= I2:Int => I1 <=Int I2
-  rule I1:Int >= I2:Int => I1 >=Int I2
-
-  rule I:Int   < F:Float => Int2Float(I, 53, 11) <Float F
-  rule F:Float < I:Int   => F <Float Int2Float(I, 53, 11)
-
-  rule I:Int   > F:Float => Int2Float(I, 53, 11) >Float F
-  rule F:Float > I:Int   => F >Float Int2Float(I, 53, 11)
-
-  rule I:Int   <= F:Float => Int2Float(I, 53, 11) <=Float F
-  rule F:Float <= I:Int   => F <=Float Int2Float(I, 53, 11)
-
-  rule I:Int   >= F:Float => Int2Float(I, 53, 11) >=Float F
-  rule F:Float >= I:Int   => F >=Float Int2Float(I, 53, 11)
+  rule I1 <= I2 => I1 <=Int I2
+  rule I1 >= I2 => I1 >=Int I2
 
   rule !true  => false
   rule !false => true
@@ -557,13 +516,8 @@ module MEDIK
   rule false || B => B
 
   rule I1 == I2 => I1 ==Int I2
-  rule F1 == F2 => F1 ==Float F2
-
   rule S1 == S2 => S1 ==String S2
   rule B1 == B2 => B1 ==Bool B2
-
-  rule I:Int   == F:Float => Int2Float(I, 53, 11) ==Float F
-  rule F:Float == I:Int   => Int2Float(I, 53, 11) ==Float F
 
   rule undef == undef => true
 
@@ -830,10 +784,6 @@ external machine
   rule Val2JSON(S:String) => S
   rule Val2JSON(undef)    => "undef"
   rule Val2JSON(B:Bool)   => Bool2String(B)
-
-  // Todo: This hack is needed because the
-  //       blockchain-k-plugin doesn't handle floats
-  rule Val2JSON(F:Float)  => "#float(" +String Float2String(F) +String ")"
 
   rule <k> print(V:Val)
         => jsonWrite( { "action" : "print"
@@ -1109,11 +1059,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Val(I:Int)    => I
   rule JSON2Val(B:Bool)   => B
   rule JSON2Val(S:String) => S
-    requires (findString(S, "#float(", 0) ==Int -1)
-  rule JSON2Val(S:String)
-    => String2Float( substrString( S
-                                 , lengthString("#float(") +Int 1
-                                 , lengthString(S) -Int 1))              [owise]
   rule JSON2Val(null)     => undef
 
   rule  <instance>

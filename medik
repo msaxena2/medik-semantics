@@ -3,7 +3,7 @@
 from pathlib import Path
 from argparse import ArgumentParser
 
-import asyncio, logging, os, sys, json, tempfile, json, re
+import asyncio, logging, os, sys, json, tempfile, json
 
 base_dir     = Path(__file__).parents[0]
 kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
@@ -50,37 +50,24 @@ async def _sleep(k_process, duration, tid):
     await k_process.stdin.drain()
     logging.info('sleep complete message sent for tid {}'.format(tid))
 
-def process_floats(out_json):
-    if out_json.get('args') != None:
-        processed_args = []
-        float_re = re.compile(r'#float\((.*)\)')
-        for arg in out_json['args']:
-            if isinstance(arg, str) and (float_re.match(arg) != None):
-                processed_args.append(float(float_re.match(arg).group(1)))
-            else:
-                processed_args.append(arg)
-        out_json['args'] = processed_args
-    return out_json
-
 async def read_stdout(k_process, handler_cb=lambda msg: print(json.dumps(msg))):
     while True:
         logging.info('waiting for k:')
         out_json = await parse_json_stream(k_process.stdout)
         if out_json == None:
             break;
-        processed_json = process_floats(out_json)
         try:
-            match processed_json.get('action'):
+            match out_json.get('action'):
                 case 'print':
-                    print(*processed_json['args'], end='', flush=True)
+                    print(*out_json['args'], end='', flush=True)
                 case 'sleep':
                     sleep_task = asyncio.create_task(_sleep( k_process
-                                                    , processed_json['duration']
-                                                    , processed_json['tid']))
+                                                    , out_json['duration']
+                                                    , out_json['tid']))
                 case 'exit':
                     break
                 case _:
-                    handler_cb(processed_json)
+                    handler_cb(out_json)
         except (ValueError, AttributeError) as e:
             sys.err.write(str(e))
             return None
