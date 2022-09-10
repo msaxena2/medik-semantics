@@ -4,4 +4,4 @@
         ignore = untracked
 [submodule "ext/blockchain-k-plugin"]
 	path = ext/blockchain-k-plugin
-	url = https://github.com/runtimeverification/blockchain-k-plugin.git
+	url = https://github.com/msaxena2/blockchain-k-plugin.git
