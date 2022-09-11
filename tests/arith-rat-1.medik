@@ -1,0 +1,9 @@
+init machine RatTest {
+  init state Start {
+    entry {
+      var a = 12 / 20;
+      // should print 0.6
+      print(a);
+    }
+  }
+}

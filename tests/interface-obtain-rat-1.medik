@@ -1,0 +1,12 @@
+interface External { }
+
+init machine Tests {
+  init state Start {
+    entry {
+      var externalSrc = createFromInterface(External, "ex1");
+      var hr = obtainFrom(externalSrc, "temp");
+      // should print 98.7
+      print(hr);
+    }
+  }
+}
