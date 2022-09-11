@@ -2,8 +2,9 @@
 
 from pathlib import Path
 from argparse import ArgumentParser
+from fractions import Fraction
 
-import asyncio, logging, os, sys, json, tempfile, json
+import asyncio, logging, os, sys, json, tempfile, json, re
 
 base_dir     = Path(__file__).parents[0]
 kompiled_dir = base_dir     / '.build' / 'medik-kompiled'
@@ -50,24 +51,40 @@ async def _sleep(k_process, duration, tid):
     await k_process.stdin.drain()
     logging.info('sleep complete message sent for tid {}'.format(tid))
 
+def process_rats(out_json):
+    if out_json.get('args') != None:
+        processed_args = []
+        rat_re = re.compile(r'<([-\d\.e]+)>Float')
+        for arg in out_json['args']:
+            if isinstance(arg, str) and rat_re.match(arg) != None:
+                processed_args.append(Fraction(rat_re.match(arg).group(1)).limit_denominator())
+                #                              , int(rat_match.group(2))))
+            else:
+                processed_args.append(arg)
+        out_json['args'] = processed_args
+    return out_json
+
 async def read_stdout(k_process, handler_cb=lambda msg: print(json.dumps(msg))):
     while True:
         logging.info('waiting for k:')
         out_json = await parse_json_stream(k_process.stdout)
         if out_json == None:
             break;
+        processed_json = process_rats(out_json)
         try:
-            match out_json.get('action'):
+            match processed_json.get('action'):
                 case 'print':
-                    print(*out_json['args'], end='', flush=True)
+                    print(*map(lambda x: float(x) if isinstance(x, Fraction) else x
+                              , processed_json['args'])
+                          , end='', flush=True)
                 case 'sleep':
                     sleep_task = asyncio.create_task(_sleep( k_process
-                                                    , out_json['duration']
-                                                    , out_json['tid']))
+                                                    , processed_json['duration']
+                                                    , processed_json['tid']))
                 case 'exit':
                     break
                 case _:
-                    handler_cb(out_json)
+                    handler_cb(processed_json)
         except (ValueError, AttributeError) as e:
             sys.err.write(str(e))
             return None

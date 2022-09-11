@@ -6,9 +6,11 @@ Syntax
 
 ```k
 requires "json.md"
+requires "rat.md"
 
 module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
+  imports RAT-SYNTAX
 
   syntax Ids ::= List{Id, ","}    [ids]
 
@@ -20,8 +22,11 @@ module MEDIK-SYNTAX
 
   syntax ThisExp ::= "this"
 
+  syntax FloatLiteral ::= r"([\\+-]?[0-9]+(\\.[0-9]*)?|\\.[0-9]+)" [token, prec(1)]
+
   syntax Exp ::= Id
-               | Int
+               | Rat
+               | FloatLiteral
                | Bool
                | String
                | UndefExp
@@ -106,8 +111,10 @@ module MEDIK
   imports DOMAINS
   imports JSON
   imports K-REFLECTION
+  imports FLOAT
+  imports RAT
 
-  syntax Val ::= "null" | "nothing" | Int | Bool | String | UndefExp
+  syntax Val ::= "null" | "nothing" | Rat | Bool | String | UndefExp
   syntax Exp ::= Val
   syntax Exps ::= Vals
 
@@ -474,22 +481,52 @@ module MEDIK
        <store> (Pointer |-> Value) ... </store>
 ```
 
+#### Rational Numbers
+We convert every floating point literal into a rational.
+
+We first convert the float-literal token to a string. Then,
+we split the string on the radix. The characteristic+mantissa string forms the
+numerator of our rational fraction. The denominator is of the form 10^n, where n
+is the number of mantissa digits.
+```k
+  syntax Rat    ::= "floatString2Rat"     "(" floatString: String ")"        [function]
+  syntax String ::= "floatLiteral2String" "(" floatToken:  FloatLiteral ")"  [function, functional, hook(STRING.token2string)]
+
+  rule F:FloatLiteral => floatString2Rat(floatLiteral2String(F))
+
+  rule floatString2Rat(FL) =>    String2Int( substrString( FL
+                                               , 0
+                                               , findChar(FL, ".", 0))
+                                     +String
+                                   substrString( FL
+                                               , findChar(FL, ".", 0) +Int 1
+                                               , lengthString(FL) )
+                                   )
+                              /Rat
+                                 (10 ^Int (lengthString(FL) -Int (findChar(FL, ".", 0) +Int 1)))
+
+```
+
 #### Arithmetic Expressions
 ```k
-  rule I1 + I2 => I1 +Int I2
-  rule I1 - I2 => I1 -Int I2
-  rule I1 * I2 => I1 *Int I2
-  rule I1 / I2 => I1 /Int I2
-    requires I2 =/=K 0
+  rule I1 + I2 => I1 +Rat I2
+  rule I1 - I2 => I1 -Rat I2
+  rule I1 * I2 => I1 *Rat I2
+  rule I1 / I2 => I1 /Rat I2
+    requires notBool (I2 ==Rat 0)
   rule _ / 0 => undef
 
-  rule S1       + S2       => S1 +String S2
-  rule S:String + I:Int    => S +String Int2String(I)
-  rule I:Int    + S:String => Int2String(I) +String S
-  rule S:String + true     => S +String "true"
-  rule S:String + false    => S +String "false"
-  rule true     + S:String => "true" +String S
-  rule false    + S:String => "false" +String S
+  rule S1       + S2          => S1 +String S2
+  rule S:String + I:Int       => S +String Int2String(I)
+  rule I:Int    + S:String    => Int2String(I) +String S
+  rule S:String + true        => S +String "true"
+  rule S:String + false       => S +String "false"
+  rule true     + S:String    => "true" +String S
+  rule false    + S:String    => "false" +String S
+  //rule S:String + R::Rat
+  //  => S +String R
+  //rule <I1, I2>Rat + S:String
+  //  => "<" Int2String(I1) +String "," +String Int2String(I2) +String ">Rat" +String S
 ```
 
 #### Blocks
@@ -501,11 +538,11 @@ module MEDIK
 #### Boolean Expressions
 
 ```k
-  rule I1 < I2 => I1 <Int I2
-  rule I1 > I2 => I1 >Int I2
+  rule I1 < I2 => I1 <Rat I2
+  rule I1 > I2 => I1 >Rat I2
 
-  rule I1 <= I2 => I1 <=Int I2
-  rule I1 >= I2 => I1 >=Int I2
+  rule I1 <= I2 => I1 <=Rat I2
+  rule I1 >= I2 => I1 >=Rat I2
 
   rule !true  => false
   rule !false => true
@@ -515,7 +552,7 @@ module MEDIK
   rule true  || _ => true
   rule false || B => B
 
-  rule I1 == I2 => I1 ==Int I2
+  rule I1 == I2 => I1 ==Rat I2
   rule S1 == S2 => S1 ==String S2
   rule B1 == B2 => B1 ==Bool B2
 
@@ -780,10 +817,12 @@ external machine
 
   syntax JSON ::= "Val2JSON" "(" Val ")" [function]
 
-  rule Val2JSON(I:Int)    => I
-  rule Val2JSON(S:String) => S
-  rule Val2JSON(undef)    => "undef"
-  rule Val2JSON(B:Bool)   => Bool2String(B)
+  rule Val2JSON(R::Rat)
+    => "<" +String Float2String(Rat2Float(R, 53, 11)) +String ">Float"
+  rule Val2JSON(I:Int)      => I
+  rule Val2JSON(S:String)   => S
+  rule Val2JSON(undef)      => "undef"
+  rule Val2JSON(B:Bool)     => Bool2String(B)
 
   rule <k> print(V:Val)
         => jsonWrite( { "action" : "print"
@@ -869,10 +908,11 @@ source at runtime.
   syntax JSONs ::= "Exps2JSONs" "(" Vals ")" [function]
                  | "Obj2JSONs"  "(" Map ")"  [function]
 
-  syntax ExpOrJSON ::= Val | JSON
+  syntax ValOrJSON ::= Val | JSON
 
-  syntax Exp ::= "JSON2Obj"     "(" ExpOrJSON ")"
-               | "constructObj" "(" ExpOrJSON ")"
+  syntax Exp ::= ValOrJSON
+               | "JSON2Obj"     "(" ValOrJSON ")"
+               | "constructObj" "(" ValOrJSON ")"
                | "result2Obj"   "(" JSON ")"
                | "JSONs2Obj"    "(" JSONs ")"
 
@@ -1059,6 +1099,13 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Val(I:Int)    => I
   rule JSON2Val(B:Bool)   => B
   rule JSON2Val(S:String) => S
+    requires  (findChar(S, "<", 0) ==Int -1)
+      andBool (rfindString(S, ">Rat", 0) ==Int -1)
+  rule JSON2Val(S:String)
+    =>     String2Int(substrString(S, 1                         , findChar(S, ",", 0)))
+      /Rat String2Int(substrString(S, findChar(S, ",", 0) +Int 1, lengthString(S) -Int lengthString(">Rat")))
+    [owise]
+
   rule JSON2Val(null)     => undef
 
   rule  <instance>
