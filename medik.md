@@ -111,8 +111,8 @@ module MEDIK
   imports DOMAINS
   imports JSON
   imports K-REFLECTION
-  imports FLOAT
   imports RAT
+  imports RAT-COMMON
 
   syntax Val ::= "null" | "nothing" | Rat | Bool | String | UndefExp
   syntax Exp ::= Val
@@ -523,10 +523,16 @@ is the number of mantissa digits.
   rule S:String + false       => S +String "false"
   rule true     + S:String    => "true" +String S
   rule false    + S:String    => "false" +String S
-  //rule S:String + R::Rat
-  //  => S +String R
-  //rule <I1, I2>Rat + S:String
-  //  => "<" Int2String(I1) +String "," +String Int2String(I2) +String ">Rat" +String S
+  rule <I1, I2>Rat + S:String
+    =>        "<" +String Int2String(I1)
+      +String "," +String Int2String(I2)
+      +String ">Rat"
+      +String S
+  rule S:String + <I1, I2>Rat
+    =>         S
+      +String "<" +String Int2String(I1)
+      +String "," +String Int2String(I2)
+      +String ">Rat"
 ```
 
 #### Blocks
@@ -817,8 +823,8 @@ external machine
 
   syntax JSON ::= "Val2JSON" "(" Val ")" [function]
 
-  rule Val2JSON(R::Rat)
-    => "<" +String Float2String(Rat2Float(R, 53, 11)) +String ">Float"
+  rule Val2JSON(<I1, I2>Rat)
+    => "<" +String Int2String(I1) +String "," +String Int2String(I2) +String ">Rat"
   rule Val2JSON(I:Int)      => I
   rule Val2JSON(S:String)   => S
   rule Val2JSON(undef)      => "undef"

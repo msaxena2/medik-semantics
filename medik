@@ -54,11 +54,12 @@ async def _sleep(k_process, duration, tid):
 def process_rats(out_json):
     if out_json.get('args') != None:
         processed_args = []
-        rat_re = re.compile(r'<([-\d\.e]+)>Float')
+        rat_re = re.compile(r'\<(-?\d+),(\d+)\>Rat')
         for arg in out_json['args']:
             if isinstance(arg, str) and rat_re.match(arg) != None:
-                processed_args.append(Fraction(rat_re.match(arg).group(1)).limit_denominator())
-                #                              , int(rat_match.group(2))))
+                rat_match = rat_re.match(arg)
+                processed_args.append(Fraction( int(rat_match.group(1))
+                                              , int(rat_match.group(2))))
             else:
                 processed_args.append(arg)
         out_json['args'] = processed_args

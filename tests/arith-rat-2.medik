@@ -1,0 +1,10 @@
+init machine A {
+  init state Start {
+    entry {
+      var a = 0.33 + 0.33;
+      if (a == 0.66) {
+        print("ok\n");
+      }
+    }
+  }
+}
