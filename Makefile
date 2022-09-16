@@ -7,7 +7,8 @@ K_SUBMODULE      := $(abspath $(DEPS_DIR)/k)
 PLUGIN_SUBMODULE := $(abspath $(DEPS_DIR)/blockchain-k-plugin)
 
 K_RELEASE ?= $(K_SUBMODULE)/k-distribution/target/release/k
-K_BIN     := $(K_RELEASE)/bin K_LIB     := $(K_RELEASE)/lib
+K_BIN     := $(K_RELEASE)/bin
+K_LIB     := $(K_RELEASE)/lib
 export K_RELEASE
 
 PATH := $(K_BIN):$(PATH)
@@ -17,6 +18,10 @@ export PATH
         deps k-deps \
         build \
         test \
+	print
+
+print:
+	@echo $(PATH)
 
 all: build
 
