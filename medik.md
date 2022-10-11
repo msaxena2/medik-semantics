@@ -120,7 +120,7 @@ module MEDIK
 
   syntax KResult ::= Val | Vals
 
-  syntax KItem ::= "createMachineTemplates" "(" Stmt ")"
+  syntax KItem ::= "createMachineDefs" "(" Stmt ")"
                  | "closeForeignFds"
 
   syntax Id ::= "$Main"
@@ -128,7 +128,7 @@ module MEDIK
   configuration <instances>
                   <instance multiplicity="*" type="Map">
                     <id> 0 </id>
-                    <k> createMachineTemplates($PGM:Stmt) ~> createInitInstances </k>
+                    <k> createMachineDefs($PGM:Stmt) ~> createInitInstances </k>
                     <env> .Map </env>
                     <genv> .Map </genv>
                     <class> $Main </class>
@@ -232,8 +232,8 @@ module MEDIK
   rule asSet(I:Id, Is:Ids) => SetItem(I) asSet(Is)
   rule asSet(.Ids)         => .Set
 
-  rule createMachineTemplates(S Ss) => createMachineTemplates(S) ~> createMachineTemplates(Ss)
-  rule <k> createMachineTemplates(machine Name receives InEvents ({ Code } #as CodeBlock:Block))
+  rule createMachineDefs(S Ss) => createMachineDefs(S) ~> createMachineDefs(Ss)
+  rule <k> createMachineDefs(machine Name receives InEvents ({ Code } #as CodeBlock:Block))
         => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
        <machines>
          ( .Bag =>  <machine>
@@ -242,7 +242,7 @@ module MEDIK
                     </machine> ) ...
        </machines>
 
-  rule <k> createMachineTemplates(init machine Name receives InEvents ({ Code } #as CodeBlock))
+  rule <k> createMachineDefs(init machine Name receives InEvents ({ Code } #as CodeBlock))
         => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
        <machines>
          ( .Bag =>  <machine>
@@ -252,7 +252,7 @@ module MEDIK
                     </machine> ) ...
        </machines>
 
-  rule <k> createMachineTemplates(interface Name receives InEvents { Code })
+  rule <k> createMachineDefs(interface Name receives InEvents { Code })
         => createDeclarationCode(Name, Code) ... </k>
        <interfaces>
          ( .Bag =>  <interface>
