@@ -60,7 +60,7 @@ CPP_FILES    := $(PLUGIN_FILES)
 LLVM_KOMPILE_OPTS := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
 		     -I$(PLUGIN_SUBMODULE)/plugin-c		 \
                      $(abspath $(CPP_FILES))                     \
-		     -std=c++14 -levent -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
+		     -std=c++14 -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
 
 $(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 	mkdir -p $(BUILD_DIR)
