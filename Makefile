@@ -31,7 +31,7 @@ plugin-deps: $(PLUGIN_SUBMODULE)/make.timestamp
 
 $(K_SUBMODULE)/make.timestamp:
 	git submodule update --init --recursive -- $(K_SUBMODULE)
-	cd $(K_SUBMODULE) && mvn package -DskipTests -U -Dproject.build.type=FastBuild -Dhaskell.backend.skip
+	cd $(K_SUBMODULE) && mvn package -DskipTests -U -Dproject.build.type=FastBuild
 	touch $(K_SUBMODULE)/make.timestamp
 
 $(PLUGIN_SUBMODULE)/make.timestamp:
