@@ -52,11 +52,10 @@ build: build-llvm
 LLVM_KOMPILED_DIR := $(BUILD_DIR)/$(MAIN_DEFN_FILE)-kompiled
 build-llvm: $(LLVM_KOMPILED_DIR)/make.timestamp
 
-KOMPILE_OPTS := --hook-namespaces TIMER --hook-namespaces JSON -w all -Wno unused-symbol
+KOMPILE_OPTS := --hook-namespaces JSON -w all -Wno unused-symbol
 
 PLUGIN_FILES := $(PLUGIN_SUBMODULE)/plugin-c/json.cpp $(PLUGIN_SUBMODULE)/plugin-c/k.cpp
-HOOK_FILES   := hooks/timer.cpp
-CPP_FILES    := $(PLUGIN_FILES) $(HOOK_FILES)
+CPP_FILES    := $(PLUGIN_FILES)
 
 LLVM_KOMPILE_OPTS := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
 		     -I$(PLUGIN_SUBMODULE)/plugin-c		 \
