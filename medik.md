@@ -123,15 +123,13 @@ module MEDIK
   syntax KItem ::= "createMachineDefs" "(" Stmt ")"
                  | "closeForeignFds"
 
-  syntax Id ::= "$Main"
-
   configuration <instances>
                   <instance multiplicity="*" type="Map">
                     <id> 0 </id>
                     <k> createMachineDefs($PGM:Stmt) ~> createInitInstances </k>
                     <env> .Map </env>
                     <genv> .Map </genv>
-                    <class> $Main </class>
+                    <class> . </class>
                     <fstack> .List </fstack>
                     <stack> .List </stack>
                     <inBuffer> .List </inBuffer>
@@ -142,7 +140,7 @@ module MEDIK
                 </instances>
                 <machines>
                   <machine multiplicity="*" type="Map">
-                    <machineName> $Main </machineName>
+                    <machineName> . </machineName>
                     <declarationCode> nothing; </declarationCode>
                     <isInitMachine> false </isInitMachine>
                     <receiveEvents> .Set </receiveEvents>
@@ -392,12 +390,11 @@ module MEDIK
 
   syntax KItem ::= "createMainInstance"
                  | "createExternHandlerInstance"
+                 | "removeCurrentInstance"
                  | "readExternInput"
                  | "processExternInput" "(" IOJSON ")"
 
-  syntax Id    ::= "$ExternHandler"
-
-  rule createInitInstances => createExternHandlerInstance ~> createMainInstance
+  rule createInitInstances => createExternHandlerInstance ~> createMainInstance ~> removeCurrentInstance
 
   rule <k> createMainInstance => new InitMName ( .Vals ); ... </k>
        <machine>
@@ -408,12 +405,16 @@ module MEDIK
   rule <k> createExternHandlerInstance => . ... </k>
        (.Bag =>  <instance>
                   <id> Loc </id>
-                  <k> readExternInput </k>
-                  <class> $ExternHandler </class> ...
+                  <k> readExternInput </k> ...
                  </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
        <externInstanceId> _ => Loc </externInstanceId>
+
+  rule <instance>
+        <k> removeCurrentInstance </k> ...
+       </instance>
+    => .Bag
 
 ```
 
@@ -611,9 +612,6 @@ is the number of mantissa digits.
         </state> ...
        </machine>
 
-  // Default constructor/state if no init state present
-  syntax Id ::= "$Default"
-
   rule  <id> SourceId </id>
         <k> new MName ( .Vals ) => wait ... </k>
         ( .Bag => <instance>
@@ -622,7 +620,6 @@ is the number of mantissa digits.
                      ~> unblockCaller
                      ~> execEventHandlers </k>
                     <class> MName </class>
-                    <activeState> $Default </activeState>
                     <callerId> SourceId </callerId> ...
                    </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
@@ -971,14 +968,11 @@ source at runtime.
   rule JSONs2Obj(J:JSON, Js:JSONs) => JSON2Obj(J) ~> JSONs2Obj(Js)
   rule JSONs2Obj(.JSONs)           => .
 
-  syntax Id ::= "$Dynamic"
-
   rule <id> SourceId  </id>
        <k> constructObj( { Pairs:JSONs } ) => wait ... </k>
        ( .Bag =>  <instance>
                     <k> JSONs2Obj(Pairs) ~> unblockCaller </k>
                     <id> Loc </id>
-                    <class> $Dynamic </class>
                     <callerId> SourceId </callerId> ...
                   </instance> )
        <nextLoc> Loc:Int => Loc +Int 1 </nextLoc>
@@ -998,7 +992,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
                     <id> Loc </id>
                     <k> asGlobalDecls(InterfaceDecls) ~> unblockCaller </k>
                     <class> IName </class>
-                    <activeState> $Default </activeState>
                     <callerId> SourceId </callerId>
                     <foreignId> FId </foreignId> ...
                   </instance> )
