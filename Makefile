@@ -52,26 +52,48 @@ ALL_K_FILES   := $(COMMON_FILES) $(EXTRA_K_FILES)
 
 build: build-llvm
 
+COMMON_OPTS := -w all -Wno unused-symbol
+
 # LLVM-Build Pipeline
 # -------------------
 
-LLVM_KOMPILED_DIR := $(BUILD_DIR)/$(MAIN_DEFN_FILE)-kompiled
+LLVM_BUILD_DIR 	  := $(BUILD_DIR)/llvm
+LLVM_KOMPILED_DIR := $(LLVM_BUILD_DIR)/$(MAIN_DEFN_FILE)-llvm-kompiled
 build-llvm: $(LLVM_KOMPILED_DIR)/make.timestamp
-
-KOMPILE_OPTS := --hook-namespaces JSON -w all -Wno unused-symbol
 
 PLUGIN_FILES := $(PLUGIN_SUBMODULE)/plugin-c/json.cpp $(PLUGIN_SUBMODULE)/plugin-c/k.cpp
 CPP_FILES    := $(PLUGIN_FILES)
 
-LLVM_KOMPILE_OPTS := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
+LLVM_OPTS         := --hook-namespaces JSON
+LLVM_KOMPILE_OPTS := $(COMMON_OPTS) $(LLVM_OPTS)
+LLVM_CC_OPTS      := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
 		     -I$(PLUGIN_SUBMODULE)/plugin-c		 \
                      $(abspath $(CPP_FILES))                     \
 		     -std=c++14 -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
 
 $(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
-	mkdir -p $(BUILD_DIR)
-	kompile -d $(LLVM_KOMPILED_DIR)				  \
-	$(KOMPILE_OPTS) $(addprefix -ccopt , $(LLVM_KOMPILE_OPTS)) \
+	mkdir -p $(LLVM_BUILD_DIR)
+	kompile -d $(LLVM_KOMPILED_DIR)            \
+	--md-selector 'k|concrete'                 \
+	$(LLVM_KOMPILE_OPTS)                       \
+	$(addprefix -ccopt , $(LLVM_CC_OPTS))      \
+	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
+	@touch $@
+
+# Haskell-Build Pipeline
+# ----------------------
+
+HASKELL_BUILD_DIR    := $(BUILD_DIR)/haskell
+HASKELL_KOMPILED_DIR := $(HASKELL_BUILD_DIR)/$(MAIN_DEFN_FILE)-haskell-kompiled
+
+build-haskell: $(HASKELL_KOMPILED_DIR)/make.timestamp
+
+$(HASKELL_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
+	mkdir -p $(HASKELL_BUILD_DIR)
+	kompile -d $(HASKELL_KOMPILED_DIR)         \
+	--backend haskell			   \
+	--md-selector 'k|symbolic'                 \
+	$(HASKELL_KOMPILE_OPTS)                    \
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
