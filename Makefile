@@ -7,7 +7,8 @@ K_SUBMODULE      := $(abspath $(DEPS_DIR)/k)
 PLUGIN_SUBMODULE := $(abspath $(DEPS_DIR)/blockchain-k-plugin)
 
 K_RELEASE ?= $(K_SUBMODULE)/k-distribution/target/release/k
-K_BIN     := $(K_RELEASE)/bin K_LIB     := $(K_RELEASE)/lib
+K_BIN     := $(K_RELEASE)/bin
+K_LIB     := $(K_RELEASE)/lib
 export K_RELEASE
 
 PATH := $(K_BIN):$(PATH)
@@ -23,14 +24,19 @@ all: build
 # K Dependencies
 # --------------
 
-deps: repo-deps
-repo-deps: k-deps
-k-deps: $(K_SUBMODULE)/make.timestamp
+deps	   : repo-deps
+repo-deps  : k-deps plugin-deps
+k-deps	   : $(K_SUBMODULE)/make.timestamp
+plugin-deps: $(PLUGIN_SUBMODULE)/make.timestamp
 
 $(K_SUBMODULE)/make.timestamp:
 	git submodule update --init --recursive -- $(K_SUBMODULE)
 	cd $(K_SUBMODULE) && mvn package -DskipTests -U -Dproject.build.type=FastBuild -Dhaskell.backend.skip
 	touch $(K_SUBMODULE)/make.timestamp
+
+$(PLUGIN_SUBMODULE)/make.timestamp:
+	git submodule update --init --recursive -- $(PLUGIN_SUBMODULE)
+	touch $(PLUGIN_SUBMODULE)/make.timestamp
 
 # Building
 # --------
