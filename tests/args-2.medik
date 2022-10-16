@@ -1,7 +1,7 @@
 machine Args {
   init state Foo {
-    var b;
     entry (a, c) {
+      var b;
       c = a;
       b = c;
       print(c); // should print1
