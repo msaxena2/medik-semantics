@@ -14,16 +14,8 @@ module MEDIK-SYNTAX
 
   syntax Ids ::= List{Id, ","}    [klabel(ids)]
 
-  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), avoid]
-  syntax UndefExp ::= "undef"
-
-  syntax Val
+  syntax Val  ::= Int | Bool | String
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
-
-  syntax Exp ::= Val
-  syntax Exps ::= Vals
-
-  syntax ThisExp ::= "this"
 
   syntax FloatLiteral ::= r"([\\+-]?[0-9]+(\\.[0-9]*)?|\\.[0-9]+)" [token, prec(1)]
 
@@ -31,14 +23,11 @@ module MEDIK-SYNTAX
                          | "createFromInterface" "(" Id "," String ")" [strict(2)]
                          | Id "(" Exps ")"                             [strict(2)]
                          | "exit"
-
   syntax Exp ::= Id
+               | Val
                | Rat
                | FloatLiteral
-               | Bool
-               | String
-               | UndefExp
-               | ThisExp
+               | "this"
                | "obtainFrom" "(" Exp "," Exp ")"            [strict]
                | "(" Exp ")"                                 [bracket]
                > Exp "." Exp                                 [strict(1), left]
@@ -58,6 +47,9 @@ module MEDIK-SYNTAX
                > Exp "in" Exp
                | "parseInt" "(" Exp ")"                      [strict]
                | StandaloneExp
+
+  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), avoid]
+                | Vals
 
   syntax Stmt ::= StandaloneExp ";"                               [strict]
                 | "sleep" "(" Exp ")" ";"                         [strict(1)]
@@ -147,7 +139,7 @@ module MEDIK
   imports RAT
   imports RAT-COMMON
 
-  syntax Val  ::= "null" | Rat | Bool | String | UndefExp
+  syntax Val  ::= "null" | "undef" | Rat | Bool | String
 
   syntax KResult ::= Val | Vals
 
