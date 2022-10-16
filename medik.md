@@ -12,7 +12,7 @@ module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
   imports RAT-SYNTAX
 
-  syntax Ids ::= List{Id, ","}    [ids]
+  syntax Ids ::= List{Id, ","}    [klabel(ids)]
 
   syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), avoid]
   syntax UndefExp ::= "undef"
@@ -20,9 +20,17 @@ module MEDIK-SYNTAX
   syntax Val
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
 
+  syntax Exp ::= Val
+  syntax Exps ::= Vals
+
   syntax ThisExp ::= "this"
 
   syntax FloatLiteral ::= r"([\\+-]?[0-9]+(\\.[0-9]*)?|\\.[0-9]+)" [token, prec(1)]
+
+  syntax StandaloneExp ::= "new" Id "(" Exps ")"                       [strict(2)]
+                         | "createFromInterface" "(" Id "," String ")" [strict(2)]
+                         | Id "(" Exps ")"                             [strict(2)]
+                         | "exit"
 
   syntax Exp ::= Id
                | Rat
@@ -32,10 +40,7 @@ module MEDIK-SYNTAX
                | UndefExp
                | ThisExp
                | "obtainFrom" "(" Exp "," Exp ")"            [strict]
-               | "yield"
-               | "exit"
                | "(" Exp ")"                                 [bracket]
-               | Id "(" Exps ")"                             [strict(2)]
                > Exp "." Exp                                 [strict(1), left]
                > Exp "+" Exp                                 [strict, left]
                | Exp "-" Exp                                 [strict, left]
@@ -49,45 +54,45 @@ module MEDIK-SYNTAX
                | Exp "&&" Exp                                [strict(1), left]
                | Exp "||" Exp                                [strict, left]
                > Exp "==" Exp                                [strict, left]
-               | "sleep" "(" Exp ")"                         [strict(1)]
-               | "new" Id "(" Exps ")"                       [strict(2)]
-               | "send" Exp "," Id                           [strict(1)]
-               | "send" Exp "," Id "," "(" Exps ")"          [strict(1, 3)]
-               | Exp "in" Exp
-               | "interval" "(" Exp "," Exp ")"              [strict]
-               | "broadcast" Id                              [broadcast]
-               | "broadcast" Id "," "(" Exps ")"             [strict(2)]
-               | "goto" Id
-               | "goto" Id "(" Exps ")"                      [strict(2)]
-               | "print" "(" Exp ")"                         [strict]
-               | "createFromInterface" "(" Id "," String ")" [strict(2)]
+               | "interval" "(" Exp "," Exp ")"
+               > Exp "in" Exp
                | "parseInt" "(" Exp ")"                      [strict]
-               > "return"
-               | "return" Exp                                [strict(1)]
-               > Exp "=" Exp                                 [strict(2)]
-               > "var" Id
-               | "vars" Ids
-               | "var" Exp "=" Exp
+               | StandaloneExp
 
-  syntax Stmt ::= Exp ";"                                  [strict]
+  syntax Stmt ::= StandaloneExp ";"                               [strict]
+                | "sleep" "(" Exp ")" ";"                         [strict(1)]
+                | "send" Exp "," Id ";"                           [macro]
+                | "send" Exp "," Id "," "(" Exps ")" ";"          [strict(1, 3)]
+                | "broadcast" Id ";"                              [macro]
+                | "broadcast" Id "," "(" Exps ")" ";"             [strict(2)]
+                | "goto" Id ";"                                   [macro]
+                | "goto" Id "(" Exps ")" ";"                      [strict(2)]
+                | "print" "(" Exp ")" ";"                         [strict]
+                > "return" ";"
+                | "return" Exp ";"                                [strict(1)]
+                | "var" Id "=" Exp ";"                            [macro]
+                > Exp "=" Exp ";"                                 [strict(2)]
+                > "var" Id ";"
+                | "vars" Ids ";"                                  [macro-rec]
                 | Block
-                > "if" "(" Exp ")" Block                   [strict(1)]
-                | "if" "(" Exp ")" Block "else" Block      [strict(1)]
+                > "if" "(" Exp ")" Block                          [strict(1)]
+                | "if" "(" Exp ")" Block "else" Block             [strict(1)]
                 | "while" "(" Exp ")" Block
-                | "entry" Block
+                | "entry" Block                                   [macro]
                 | "entry" "(" Ids ")" Block
-                | "on" Id "do" Block
+                | "on" Id "do" Block                              [macro]
                 | "on" Id "(" Ids ")" "do" Block
                 | "fun" Id "(" Ids ")" Block
                 | Exp "in" "{" CaseDecl "}"
                 | StateDecl
-                > "machine" Id Block
+                > "machine" Id Block                              [macro]
                 | "machine" Id "receives" Ids Block
-                | "interface" Id Block
+                | "interface" Id Block                            [macro]
                 | "interface" Id "receives" Ids Block
-                | "init" "machine" Id Block
+                | "init" "machine" Id Block                       [macro]
                 | "init" "machine" Id "receives" Ids Block
-                > Stmt Stmt                                [right]
+                | "yield" ";"
+                > Stmt Stmt                                       [right]
 
   syntax StateDecl ::= "state" Id Block
                      | "init" "state" Id Block
@@ -96,8 +101,36 @@ module MEDIK-SYNTAX
                     | CaseDecl "default" ":" Stmt
                     > CaseDecl CaseDecl                    [right]
 
-  syntax Block ::= "{" "}"
+  syntax Block ::= "{" "}"                                 [macro]
                  | "{" Stmt "}"
+endmodule
+```
+### Macros
+
+Rewrite rules for `macro` constructs
+
+```k
+module MEDIK-SYNTAX-EXT
+  imports MEDIK-SYNTAX
+
+  rule vars I1:Id, I2:Id, Is:Ids; => var I1; vars I2, Is;
+  rule vars I, .Ids; => var I;
+  rule var I:Id = E:Exp ; => var I; I = E;
+  rule entry B:Block => entry (.Ids) B
+  rule on E:Id do B:Block => on E (.Ids) do B
+  rule send Id , Event; => send Id, Event, ( .Vals );
+  rule goto State:Id; => goto State ( .Vals );
+  rule machine Name:Id Code
+    => machine Name receives .Ids Code
+  rule init machine Name:Id Code
+    => init machine Name receives .Ids Code
+  rule broadcast Event; => broadcast Event, ( .Vals );
+  rule interface Name:Id Code
+    => interface Name receives .Ids Code
+
+  syntax Stmt ::= "nothing" ";"
+
+  rule { } => { nothing; }
 
 endmodule
 ```
@@ -107,21 +140,20 @@ Semantics
 
 ```k
 module MEDIK
-  imports MEDIK-SYNTAX
+  imports MEDIK-SYNTAX-EXT
   imports DOMAINS
   imports JSON
   imports K-REFLECTION
   imports RAT
   imports RAT-COMMON
 
-  syntax Val ::= "null" | "nothing" | Rat | Bool | String | UndefExp
-  syntax Exp ::= Val
-  syntax Exps ::= Vals
+  syntax Val  ::= "null" | Rat | Bool | String | UndefExp
 
   syntax KResult ::= Val | Vals
 
   syntax KItem ::= "createMachineDefs" "(" Stmt ")"
                  | "closeForeignFds"
+
 
   configuration <instances>
                   <instance multiplicity="*" type="Map">
@@ -147,16 +179,16 @@ module MEDIK
                     <states>
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
-                        <stateDeclarations> nothing; </stateDeclarations>
-                        <entryBlock> . </entryBlock>
-                        <args> . </args>
+                        <stateDeclarations> . </stateDeclarations>
+                        <entryBlock>  nothing; </entryBlock>
+                        <args> .Ids </args>
                         <isInitState> false </isInitState>
                         <exitBlock> . </exitBlock>
                         <eventHandlers>
                           <eventHandler multiplicity="*" type="Set">
                             <eventId> . </eventId>
-                            <eventArgs> . </eventArgs>
-                            <handlerCode> . </handlerCode>
+                            <eventArgs> .Ids </eventArgs>
+                            <handlerCode> nothing; </handlerCode>
                           </eventHandler>
                         </eventHandlers>
                       </state>
@@ -183,34 +215,6 @@ module MEDIK
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
-```
-### Macros
-
-```k
-  rule vars I1:Id, I2:Id, Is:Ids; => var I1; vars I2, Is;       [macro-rec]
-  rule vars I, .Ids; => var I;                                  [macro]
-  rule var I:Id = E:Exp ; => var I; I = E;                      [macro]
-  rule entry B:Block => entry (.Ids) B                          [macro]
-  rule on E:Id do B:Block => on E (.Ids) do B                   [macro]
-  rule send Id , Event => send Id, Event, ( .Vals )             [macro]
-  rule goto State:Id => goto State ( .Vals )                    [macro]
-  rule machine Name:Id Code
-    => machine Name receives .Ids Code                          [macro]
-  rule init machine Name:Id Code
-    => init machine Name receives .Ids Code                     [macro]
-  rule broadcast Event => broadcast Event, ( .Vals )            [macro]
-  rule while (Cond) Block
-   => if (Cond) { Block while (Cond) Block }                    [structural]
-  rule E in interval(L, R) => (E >= L) && (E < R)               [macro]
-  rule E in { interval(L, U): S:Stmt Cs:CaseDecl }
-    => if (E in interval(L, U)) { S } else { E in { Cs } }      [macro-rec]
-  rule E in { interval(L, U): S:Stmt }
-    => if (E in interval(L, U)) { S }                           [macro]
-  rule E in { interval(L, U): S1:Stmt default: S2:Stmt }
-    => if (E in interval(L, U)) { S1 } else { S2 }              [macro]
-  rule interface Name:Id Code
-    => interface Name receives .Ids Code                        [macro]
-  rule interface _ receives _ ( { } => { nothing; } )           [macro]
 ```
 
 ### Machine Template Creation
@@ -396,7 +400,7 @@ module MEDIK
 
   rule createInitInstances => createExternHandlerInstance ~> createMainInstance ~> removeCurrentInstance
 
-  rule <k> createMainInstance => new InitMName ( .Vals ); ... </k>
+  rule <k> createMainInstance => new InitMName ( .Vals ) ; ... </k>
        <machine>
         <machineName> InitMName </machineName>
         <isInitMachine> true </isInitMachine> ...
@@ -422,25 +426,26 @@ module MEDIK
 
 #### Variable Assignment and Lookup
 ```k
+  rule nothing ;   => .
+  rule _:Val ;     => .
+
   rule S:Stmt Ss:Stmt => S ~> Ss
 
-  syntax Exp ::= "var" Exp "." Id [strict(1)]
+  syntax Stmt ::= "var" Exp "." Id ";" [strict(1)]
 
   rule <k> this => instance(Id) ... </k>
        <id> Id </id>
 
-  rule <k> var instance(Id) . Field => Loc ... </k>
+  rule <k> var instance(Id) . Field ; => . ... </k>
        <id> Id </id>
        <genv> GRho => GRho[Field <- Loc] </genv>
        <store> (.Map => (Loc |-> undef)) ... </store>
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
 
-  rule <k> var Id => Loc ... </k>
+  rule <k> var Id ; => . ... </k>
        <env> Rho => Rho[Id <- Loc] </env>
        <store> .Map => (Loc |-> undef) ... </store>
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
-
-  rule _:Val; => .
 
   rule <k> I:Id => V ... </k>
        <env> (I |-> Loc) ... </env>
@@ -451,18 +456,18 @@ module MEDIK
        <genv> GRho </genv>
     requires (notBool(I in keys(Rho))) andBool (I in keys(GRho))
 
-  rule <k> I:Id = V:Val => V ... </k>
+  rule <k> I:Id = V:Val ; => . ... </k>
        <env> (I |-> Loc) ... </env>
        <store> Store => Store[Loc <- V] </store>
 
-  context HOLE . _:Id = _:Val
+  context HOLE . _:Id = _:Val ;
 
-  rule <k> ( I:Id => this . I ) = _:Val ... </k>
+  rule <k> ( I:Id => this . I ) = _:Val ; ... </k>
        <env> Rho </env>
        <genv> GRho </genv>
     requires (notBool(I in keys(Rho))) andBool (I in keys(GRho))
 
-  rule <k> ( instance(Id) . Field:Id = V:Val ) => V ... </k>
+  rule <k> ( instance(Id) . Field:Id = V:Val ; ) => . ... </k>
        <id> Id </id>
        <genv> (Field |-> Pointer) ... </genv>
        <store> (Pointer |-> (_ => V)) ... </store>
@@ -489,6 +494,7 @@ We first convert the float-literal token to a string. Then,
 we split the string on the radix. The characteristic+mantissa string forms the
 numerator of our rational fraction. The denominator is of the form 10^n, where n
 is the number of mantissa digits.
+
 ```k
   syntax Rat    ::= "floatString2Rat"     "(" floatString: String ")"        [function]
   syntax String ::= "floatLiteral2String" "(" floatToken:  FloatLiteral ")"  [function, functional, hook(STRING.token2string)]
@@ -585,9 +591,8 @@ is the number of mantissa digits.
                  | "wait"
                  | "dequeueEvent"
 
-  syntax InstExp ::= "instance" "(" instanceId: Int ")"
-  syntax Exp ::= InstExp
-  syntax Val ::= InstExp
+  syntax Val           ::= "instance" "(" instanceId: Int ")"
+  syntax StandaloneExp ::= Val
 
   rule  <id> SourceId </id>
         <k> new MName ( Args ) => wait ... </k>
@@ -648,7 +653,7 @@ is the number of mantissa digits.
   rule <k> unblockCaller => . ... </k>
        <callerId> . </callerId>
 
-  rule yield => unblockCaller ~> nothing
+  rule yield; => unblockCaller
 
   rule <k> execEntryCode(SName, Vals)
         =>   recordEnv
@@ -686,19 +691,6 @@ is the number of mantissa digits.
           <args> Args </args> ...
         </state> ...
       </machine>
-
-  rule <k> execEntryBlock(.Vals) => . ... </k>
-       <class> MName </class>
-       <activeState> ActiveState </activeState>
-       <machine>
-        <machineName> MName </machineName>
-        <state>
-          <stateName> ActiveState </stateName>
-          <entryBlock> . </entryBlock>
-          <args> . </args> ...
-        </state> ...
-      </machine>
-
   rule assign(I:Id , Is | V:Val, Vs)
     => var I = V; ~> assign(Is | Vs)
 
@@ -716,7 +708,7 @@ it is unblocked before the switch occurs.
 ```k
   syntax KItem ::= "clearEnv"
 
-  rule <k> goto Target:Id ( Args:Vals ) ~> _
+  rule <k> goto Target:Id ( Args:Vals ) ; ~> _
        =>    unblockCaller
           ~> recordEnv
           ~> execEntryCode( Target , Args )
@@ -728,7 +720,6 @@ it is unblocked before the switch occurs.
 
 ##### Sending Events
 ```k
-  syntax Val ::= "done"
   syntax KItem ::= "eventArgsPair"    "(" eventId: Id "|" args: Vals ")"
                  | "performBroadcast" "(" eventId: Id "|" args: Vals "|" List ")"
 
@@ -763,7 +754,7 @@ it is unblocked before the switch occurs.
   rule getRecieversAux(Event | ListItem(_) Rest) => getRecieversAux(Event | Rest) [owise]
 
   rule <instance>
-        <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
+        <k> send instance(Id) , EventName:Id , ( Args ) ; =>  . ... </k>
         ...
        </instance>
        <instance>
@@ -773,18 +764,18 @@ it is unblocked before the switch occurs.
        </instance>
        <machineName> CName </machineName>
 
-  rule <k> send instance(Id) , EventName:Id , ( Args ) =>  done ... </k>
+  rule <k> send instance(Id) , EventName:Id , ( Args ) ; =>  . ... </k>
        <id> Id </id>
        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
 
-  rule broadcast EventName:Id , ( Args )
+  rule broadcast EventName:Id , ( Args ) ;
     => performBroadcast ( EventName | Args | getRecievers(EventName))
 
   rule performBroadcast ( EventName | Args | ListItem(Id) Recievers)
     =>   send instance(Id), EventName, ( Args ) ;
       ~> performBroadcast ( EventName | Args | Recievers)
 
-  rule performBroadcast(_ | _ | .List) => done
+  rule performBroadcast(_ | _ | .List) => .
 ```
 
 ##### Dequeueing Events
@@ -827,16 +818,16 @@ external machine
   rule Val2JSON(undef)      => "undef"
   rule Val2JSON(B:Bool)     => Bool2String(B)
 
-  rule <k> print(V:Val)
+  rule <k> print(V:Val) ;
         => jsonWrite( { "action" : "print"
                       , "args"   : [Val2JSON(V)] }
-                    , #stdout) ~> V ...
+                    , #stdout)  ...
        </k>
        <tidCount> TId => TId +Int 1 </tidCount>
 
 ```
 
-#### If/While
+#### If/While/In
 
 ```k
   rule if (true) Block => Block
@@ -844,6 +835,18 @@ external machine
 
   rule if (true) Block else _  => Block
   rule if (false) _ else Block => Block
+```
+
+```k
+  rule while (Cond) Block
+   => if (Cond) { Block while (Cond) Block }
+  rule E in interval(L, R) => (E >= L) && (E < R)
+  rule E in { interval(L, U): S:Stmt Cs:CaseDecl }
+    => if ((E >= L) && (E < U)) { S } else { E in { Cs } }
+  rule E in { interval(L, U): S:Stmt }
+    => if ((E >= L) && (E < U)) { S }
+  rule E in { interval(L, U): S1:Stmt default: S2:Stmt }
+    => if  ((E >= L) && (E < U)) { S1 } else { S2 }
 ```
 
 #### Methods
@@ -866,11 +869,11 @@ external machine
        <fstack> (.List => ListItem(fstackItem(Rho | Rest))) ... </fstack>
        <env> Rho </env>
 
-  rule <k> return ~> _ => done ~> Rest </k>
+  rule <k> return ; ~> _ => Rest </k>
        <env> _ => Rho </env>
        <fstack> (ListItem(fstackItem(Rho | Rest)) => .List) ... </fstack>
 
-  rule <k> return V:Val ~> _ => V ~> Rest </k>
+  rule <k> return V:Val ; ~> _ => V ~> Rest </k>
        <env> _ => Rho </env>
        <fstack> (ListItem(fstackItem(Rho | Rest)) => .List) ... </fstack>
 
@@ -1005,12 +1008,12 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInstances> _ => true </foreignInstances>
 
 
-  rule <k> send instance(Id) , EventName:Id , ( Args )
+  rule <k> send instance(Id) , EventName:Id , ( Args ) ;
         => jsonWrite( { "id"        : FId
                       , "tid"       : TId
                       , "interface" : Exp2JSON(IName)
                       , "name"      : Exp2JSON(EventName)
-                      , "args"      : [Exps2JSONs(Args)] }, #stdout) ~> done ...
+                      , "args"      : [Exps2JSONs(Args)] }, #stdout) ...
        </k>
        <instance>
         <id> Id </id>
@@ -1054,7 +1057,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   rule processExternInput([ .JSONs ]) => .
 
-  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => done </k>
+  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => . </k>
 
 
   syntax KItem ::= "doRead"
@@ -1083,7 +1086,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
                                  , "fieldName" : FNameStr:String
                                  , "fieldVal"  : NewVal:JSON
                                  , _:JSONs } )
-          =>  broadcast createUpdateStateEvent(IName, FNameStr) ...
+          =>  broadcast createUpdateStateEvent(IName, FNameStr) ; ...
           </k> ...
        </instance>
        <instance>
@@ -1125,7 +1128,7 @@ A simple hook to make the process wait
 ```k
   syntax KItem ::= "waitForSleepResponse" "(" tid: Int ")"
 
-  rule <k> sleep(Duration:Int)
+  rule <k> sleep(Duration:Int) ;
         => jsonWrite( { "action"   : "sleep"
                       , "duration" : Duration
                       , "tid"      : TId }
@@ -1135,7 +1138,7 @@ A simple hook to make the process wait
        <tidCount> TId => TId +Int 1 </tidCount>
 
   rule <instance>
-        <k> waitForSleepResponse(TId) => done ... </k> ...
+        <k> waitForSleepResponse(TId) => . ... </k> ...
        </instance>
        <instance>
         <k> processExternInput({ "action" : "sleepResponse"
