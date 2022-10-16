@@ -220,7 +220,31 @@ module MEDIK
                  | "createEntryBlock"        "(" machineName: Id "," stateName: Id "," code: Stmt ")"
                  | "createInstance"          "(" machineName: Id ")"
                  | "createInitInstances"
+```
 
+```concrete
+  syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
+  syntax IOJSON ::= IOError | JSON
+
+  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
+                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
+
+  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
+```
+
+```symbolic
+  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function]
+                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
+                  | "jsonReadError"  "(" String ")"   [klabel(JSON-RPC_readError), symbol]
+
+  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function]
+
+
+  rule jsonWrite(J, _) => jsonWriteError(J)
+  rule jsonRead(_)     => jsonReadError("unimplemented JSON Read/Write hooks")
+```
+
+```k
   syntax Set ::= "asSet" "(" Ids ")" [function]
 
   rule asSet(I:Id, Is:Ids) => SetItem(I) asSet(Is)
@@ -1003,14 +1027,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        </instance>
        <interfaceName> IName </interfaceName>
        <tidCount> TId => TId +Int 1 </tidCount>
-
-  syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
-  syntax IOJSON ::= IOError | JSON
-
-  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
-                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
-
-  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
 
   syntax Exp  ::= "JSON2Exp"   "(" JSON ")"    [function]
   syntax Exps ::= "JSONs2Exps" "(" JSONs ")"   [function]
