@@ -141,8 +141,14 @@ module MEDIK
 
   syntax Val  ::= "null" | "undef" | Rat | Bool | String
 
-  syntax KResult ::= Val | Vals
-
+  syntax KResult ::= Val
+                   | Vals
+```
+```symbolic
+  // For some reason, haskell backend doesn't cool ".Vals"
+  rule isKResult(.Vals) => true
+```
+```k
   syntax KItem ::= "createMachineDefs" "(" Stmt ")"
                  | "closeForeignFds"
 
@@ -233,7 +239,9 @@ module MEDIK
 ```
 
 ```symbolic
-  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function]
+  syntax IOJSON ::= IOError
+                  | JSON
+                  | "jsonRead" "(" Int ")"            [function]
                   | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
                   | "jsonReadError"  "(" String ")"   [klabel(JSON-RPC_readError), symbol]
 
