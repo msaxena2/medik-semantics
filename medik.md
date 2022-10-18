@@ -494,13 +494,12 @@ is the number of mantissa digits.
   rule F:FloatLiteral => floatString2Rat(floatLiteral2String(F))
 
   rule floatString2Rat(FL) =>    String2Int( substrString( FL
-                                               , 0
-                                               , findChar(FL, ".", 0))
-                                     +String
-                                   substrString( FL
-                                               , findChar(FL, ".", 0) +Int 1
-                                               , lengthString(FL) )
-                                   )
+                                                         , 0
+                                                         , findChar(FL, ".", 0))
+                                            +String
+                                            substrString( FL
+                                                        , findChar(FL, ".", 0) +Int 1
+                                                        , lengthString(FL)))
                               /Rat
                                  (10 ^Int (lengthString(FL) -Int (findChar(FL, ".", 0) +Int 1)))
 
