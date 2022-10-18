@@ -386,17 +386,10 @@ module MEDIK
 
   syntax KItem ::= "createMainInstance"
                  | "createExternHandlerInstance"
-                 | "removeCurrentInstance"
                  | "readExternInput"
                  | "processExternInput" "(" IOJSON ")"
 
-  rule createInitInstances => createExternHandlerInstance ~> createMainInstance ~> removeCurrentInstance
-
-  rule <k> createMainInstance => new InitMName ( .Vals ) ; ... </k>
-       <machine>
-        <machineName> InitMName </machineName>
-        <isInitMachine> true </isInitMachine> ...
-       </machine>
+  rule createInitInstances => createExternHandlerInstance ~> createMainInstance
 
   rule <k> createExternHandlerInstance => . ... </k>
        (.Bag =>  <instance>
@@ -407,11 +400,17 @@ module MEDIK
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
        <externInstanceId> _ => Loc </externInstanceId>
 
-  rule <instance>
-        <k> removeCurrentInstance </k> ...
-       </instance>
-    => .Bag
-
+  rule <k>    createMainInstance
+        =>    asGlobalDecls(MachineDecls)
+           ~> enterInitState(.Vals)
+           ~> execEventHandlers
+       </k>
+       <class> _ => InitMName </class>
+       <machine>
+        <machineName> InitMName </machineName>
+        <declarationCode> MachineDecls </declarationCode>
+        <isInitMachine> true </isInitMachine> ...
+       </machine>
 ```
 
 ### Expression and Statement
@@ -575,6 +574,7 @@ is the number of mantissa digits.
   syntax KItem ::= "execEntryCode"  "(" stateName: Id "," entryArgs: Vals ")"
                  | "asGlobalDecls"  "(" decls: Stmt ")"
                  | "execEntryBlock" "(" Vals ")"
+                 | "enterInitState" "(" Vals ")"
                  | "unblockCaller"
                  | "recordEnv"
                  | "restoreEnv"
@@ -590,29 +590,7 @@ is the number of mantissa digits.
         ( .Bag => <instance>
                     <id> Loc </id>
                     <k> asGlobalDecls(MachineDecls)
-                     ~> execEntryCode(InitState, Args)
-                     ~> unblockCaller
-                     ~> execEventHandlers </k>
-                    <class> MName </class>
-                    <callerId> SourceId </callerId> ...
-                   </instance> )
-       <nextLoc> Loc => Loc +Int 1 </nextLoc>
-       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
-       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
-       <machine>
-        <machineName> MName </machineName>
-        <declarationCode> MachineDecls </declarationCode>
-        <state>
-          <stateName> InitState </stateName>
-          <isInitState> true </isInitState> ...
-        </state> ...
-       </machine>
-
-  rule  <id> SourceId </id>
-        <k> new MName ( .Vals ) => wait ... </k>
-        ( .Bag => <instance>
-                    <id> Loc </id>
-                    <k> asGlobalDecls(MachineDecls)
+                     ~> enterInitState(Args)
                      ~> unblockCaller
                      ~> execEventHandlers </k>
                     <class> MName </class>
@@ -624,7 +602,19 @@ is the number of mantissa digits.
        <machine>
         <machineName> MName </machineName>
         <declarationCode> MachineDecls </declarationCode> ...
-       </machine>                                                       [owise]
+       </machine>
+
+  rule <k> enterInitState(Args) => execEntryCode(InitState, Args) ... </k>
+       <class> MName </class>
+       <machine>
+         <machineName> MName </machineName>
+         <state>
+          <stateName> InitState </stateName>
+          <isInitState> true </isInitState> ...
+         </state> ...
+       </machine>
+
+  rule enterInitState(.Vals) => . [owise]
 
   rule asGlobalDecls(S:Stmt Ss:Stmt)
     => asGlobalDecls(S) ~> asGlobalDecls(Ss)
