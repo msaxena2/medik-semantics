@@ -420,7 +420,9 @@ module MEDIK
                  | "createExternHandlerInstance"
                  | "readExternInput"
                  | "processExternInput" "(" IOJSON ")"
+```
 
+```concrete
   rule createInitInstances => createExternHandlerInstance ~> createMainInstance
 
   rule <k> createExternHandlerInstance => . ... </k>
@@ -431,7 +433,13 @@ module MEDIK
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> (.Map => (Loc |-> instance(Loc))) ... </store>
        <externInstanceId> _ => Loc </externInstanceId>
+````
 
+```symbolic
+  rule createInitInstances => createMainInstance
+```
+
+```k
   rule <k>    createMainInstance
         =>    asGlobalDecls(MachineDecls)
            ~> enterInitState(.Vals)
