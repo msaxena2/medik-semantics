@@ -213,6 +213,7 @@ module MEDIK
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
+                <executorAvailable> true </executorAvailable>
 ```
 
 ### Machine Template Creation
@@ -609,12 +610,12 @@ is the number of mantissa digits.
 ```
 
 #### Instance creation via new
-
 ```k
-  syntax KItem ::= "execEntryCode"  "(" stateName: Id "," entryArgs: Vals ")"
-                 | "asGlobalDecls"  "(" decls: Stmt ")"
-                 | "execEntryBlock" "(" Vals ")"
-                 | "enterInitState" "(" Vals ")"
+  syntax KItem ::= "execEntryCode"   "(" stateName: Id "," entryArgs: Vals ")"
+                 | "asGlobalDecls"   "(" decls: Stmt ")"
+                 | "execEntryBlock"  "(" Vals ")"
+                 | "enterInitState"  "(" Vals ")"
+                 | "unblockInstance" "(" instanceId: Int ")"
                  | "unblockCaller"
                  | "recordEnv"
                  | "restoreEnv"
@@ -625,13 +626,81 @@ is the number of mantissa digits.
   syntax Val           ::= "instance" "(" instanceId: Int ")"
   syntax StandaloneExp ::= Val
 
+```
+
+#### Executors
+
+An executor is responsible for *running* a block of code.
+
+```k
+  syntax KItem ::= "releaseExecutor"
+
+  rule <k> releaseExecutor => . ... </k>
+       <executorAvailable> _ => true </executorAvailable>
+```
+
+#### Entering States
+
+```k
+  syntax KItem ::= "enterState" "(" stateName: Id "," entryArgs: Vals ")"
+
+  rule <k>   enterState(SName, Args)
+        =>   StateDecls
+          ~> recordEnv
+          ~> assign(BlockVars | Args)
+          ~> EntryBlock
+          ~> restoreEnv
+          ~> releaseExecutor
+          ~> handleEvents ...
+       </k>
+       <activeState> _ => SName </activeState>
+       <env> _ => .Map </env>
+       <class> MName </class>
+       <machine>
+        <machineName> MName </machineName>
+         <state>
+          <stateName> SName </stateName>
+          <stateDeclarations> StateDecls </stateDeclarations>
+          <entryBlock> EntryBlock </entryBlock>
+          <args> BlockVars </args> ...
+         </state> ...
+        </machine>
+       <executorAvailable> true => false </executorAvailable>
+```
+
+#### Event Handling
+
+A machine is *enabled* if there is an event in the queue that
+can be handled in the active state
+
+```k
+  syntax KItem ::= "handleEvents"
+
+  rule <k>   handleEvents
+        =>   assign(Vars | Args)
+          ~> HandlerCode
+          ~> releaseExecutor ...
+       </k>
+       <activeState> Active </activeState>
+       <inBuffer> (ListItem(eventArgsPair(EventId | Args)) => .List) ... </inBuffer>
+       <state>
+        <stateName> Active </stateName>
+        <eventHandler>
+          <eventId> EventId </eventId>
+          <eventArgs> Vars </eventArgs>
+          <handlerCode> HandlerCode </handlerCode> ...
+        </eventHandler> ...
+      </state>
+```
+
+```k
   rule  <id> SourceId </id>
         <k> new MName ( Args ) => wait ... </k>
         ( .Bag => <instance>
                     <id> Loc </id>
                     <k> asGlobalDecls(MachineDecls)
+                     ~> unblockInstance(SourceId)
                      ~> enterInitState(Args)
-                     ~> unblockCaller
                      ~> execEventHandlers </k>
                     <class> MName </class>
                     <callerId> SourceId </callerId> ...
