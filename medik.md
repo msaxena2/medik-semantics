@@ -610,6 +610,47 @@ is the number of mantissa digits.
 ```
 
 #### Instance creation via new
+
+When a new instance is created, the instance cell is added and
+global environment initialized. The new instance's `init` state
+is scheduled. The *caller* does not give up control.
+
+```k
+  syntax KItem ::= "unblockInstance" "(" instanceId: Int ")"
+                 | "wait"
+
+  rule <instance>
+        <id> SourceId </id>
+        <k> wait => instance(TargetId) ... </k>  ...
+       </instance>
+       <instance>
+        <id> TargetId </id>
+        <k> unblockInstance(SourceId) => . ... </k> ...
+       </instance>
+
+  rule <id> SourceId </id>
+       <k> new MName (Args) => wait ... </k>
+       ( .Bag => <instance>
+                  <id> Loc </id>
+                  <k> asGlobalDecls(MachineDecls)
+                   ~> unblockInstance(SourceId)
+                   ~> enterState(InitState, Args)
+                  </k> ...
+                 </instance> )
+       <nextLoc> Loc => Loc +Int 1 </nextLoc>
+       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
+       <machine>
+        <machineName> MName </machineName>
+        <declarationCode> MachineDecls </declarationCode>
+        <state>
+          <stateName> InitState </stateName>
+          <isInitState> true </isInitState> ...
+        </state> ...
+       </machine>
+
+```
+
+
 ```k
   syntax KItem ::= "execEntryCode"   "(" stateName: Id "," entryArgs: Vals ")"
                  | "asGlobalDecls"   "(" decls: Stmt ")"
@@ -620,7 +661,6 @@ is the number of mantissa digits.
                  | "recordEnv"
                  | "restoreEnv"
                  | "execEventHandlers"
-                 | "wait"
                  | "dequeueEvent"
 
   syntax Val           ::= "instance" "(" instanceId: Int ")"
