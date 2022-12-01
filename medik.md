@@ -441,16 +441,19 @@ module MEDIK
 ```
 
 ```k
-  rule <k>    createMainInstance
-        =>    asGlobalDecls(MachineDecls)
-           ~> enterInitState(.Vals)
-           ~> execEventHandlers
+  rule <k>   createMainInstance
+        =>   asGlobalDecls(MachineDecls)
+          ~> enterState(InitState, .Vals) ...
        </k>
        <class> _ => InitMName </class>
        <machine>
         <machineName> InitMName </machineName>
         <declarationCode> MachineDecls </declarationCode>
-        <isInitMachine> true </isInitMachine> ...
+        <isInitMachine> true </isInitMachine>
+        <state>
+          <stateName> InitState </stateName>
+          <isInitState> true </isInitState> ...
+        </state> ...
        </machine>
 ```
 
@@ -635,7 +638,8 @@ is scheduled. The *caller* does not give up control.
                   <k> asGlobalDecls(MachineDecls)
                    ~> unblockInstance(SourceId)
                    ~> enterState(InitState, Args)
-                  </k> ...
+                  </k>
+                  <class> MName </class> ...
                  </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
@@ -653,13 +657,10 @@ is scheduled. The *caller* does not give up control.
 
 ```k
   syntax KItem ::= "execEntryCode"   "(" stateName: Id "," entryArgs: Vals ")"
-                 | "asGlobalDecls"   "(" decls: Stmt ")"
                  | "execEntryBlock"  "(" Vals ")"
                  | "enterInitState"  "(" Vals ")"
                  | "unblockInstance" "(" instanceId: Int ")"
                  | "unblockCaller"
-                 | "recordEnv"
-                 | "restoreEnv"
                  | "execEventHandlers"
                  | "dequeueEvent"
 
@@ -734,41 +735,15 @@ can be handled in the active state
 ```
 
 ```k
-  rule  <id> SourceId </id>
-        <k> new MName ( Args ) => wait ... </k>
-        ( .Bag => <instance>
-                    <id> Loc </id>
-                    <k> asGlobalDecls(MachineDecls)
-                     ~> unblockInstance(SourceId)
-                     ~> enterInitState(Args)
-                     ~> execEventHandlers </k>
-                    <class> MName </class>
-                    <callerId> SourceId </callerId> ...
-                   </instance> )
-       <nextLoc> Loc => Loc +Int 1 </nextLoc>
-       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
-       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
-       <machine>
-        <machineName> MName </machineName>
-        <declarationCode> MachineDecls </declarationCode> ...
-       </machine>
 
-  rule <k> enterInitState(Args) => execEntryCode(InitState, Args) ... </k>
-       <class> MName </class>
-       <machine>
-         <machineName> MName </machineName>
-         <state>
-          <stateName> InitState </stateName>
-          <isInitState> true </isInitState> ...
-         </state> ...
-       </machine>
-
-  rule enterInitState(.Vals) => . [owise]
+  syntax KItem ::= "asGlobalDecls"   "(" decls: Stmt ")"
 
   rule asGlobalDecls(S:Stmt Ss:Stmt)
     => asGlobalDecls(S) ~> asGlobalDecls(Ss)
   rule asGlobalDecls(var Id;) => var this . Id;
   rule asGlobalDecls(S:Stmt) => S               [owise]
+
+  syntax KItem ::= "unblockCaller"
 
   rule <instance>
         <id> SourceId </id>
@@ -785,64 +760,34 @@ can be handled in the active state
 
   rule yield; => unblockCaller
 
-  rule <k> execEntryCode(SName, Vals)
-        =>   recordEnv
-          ~> StateDecls
-          ~> execEntryBlock(Vals) ...
-      </k>
-      <env> _ </env>
-      <class> Class </class>
-      <activeState> _ => SName </activeState>
-      <machine>
-        <machineName> Class </machineName>
-        <state>
-          <stateName> SName </stateName>
-          <stateDeclarations> StateDecls </stateDeclarations> ...
-        </state>
-        ...
-      </machine>
-
-  rule execEventHandlers => dequeueEvent ~> restoreEnv
+  syntax KItem ::= "recordEnv"
+                 | "restoreEnv"
 
   rule <k> recordEnv => . ... </k>
        <env> Rho </env>
        <stack> .List => ListItem(Rho) ... </stack>
 
+  rule <k> restoreEnv => . ... </k>
+       <env> _ => Rho </env>
+       <stack> (ListItem(Rho) => .List ) ... </stack>
+
   syntax KItem ::= "assign" "(" args: Ids "|" values: Vals ")"
 
-  rule <k> execEntryBlock(Vals) => assign(Args | Vals) ~> EntryCode ... </k>
-       <class> MName </class>
-       <activeState> ActiveState </activeState>
-       <machine>
-        <machineName> MName </machineName>
-        <state>
-          <stateName> ActiveState </stateName>
-          <entryBlock> EntryCode </entryBlock>
-          <args> Args </args> ...
-        </state> ...
-      </machine>
   rule assign(I:Id , Is | V:Val, Vs)
     => var I = V; ~> assign(Is | Vs)
 
   rule assign( .Ids | .Vals ) => .
-
-  rule <k> restoreEnv => . ... </k>
-       <env> _ => Rho </env>
-       <stack> (ListItem(Rho) => .List ) ... </stack>
 ```
+
 ##### Semantics of goto
 
 Goto results in a context switch. If a caller is waiting on execution,
 it is unblocked before the switch occurs.
 
 ```k
-  syntax KItem ::= "clearEnv"
 
   rule <k> goto Target:Id ( Args:Vals ) ; ~> _
-       =>    unblockCaller
-          ~> recordEnv
-          ~> execEntryCode( Target , Args )
-          ~> execEventHandlers </k>
+       => releaseExecutor ~> enterState(Target, Args) </k>
        <env> _ => .Map </env>
        <stack> _ => .List </stack>
 ```
