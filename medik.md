@@ -651,6 +651,7 @@ is scheduled. The *caller* does not give up control.
           <isInitState> true </isInitState> ...
         </state> ...
        </machine>
+       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
 
 ```
 
@@ -1199,7 +1200,7 @@ A simple hook to make the process wait
         => jsonWrite( { "action"   : "sleep"
                       , "duration" : Duration
                       , "tid"      : TId }
-                    , #stdout ) ~> waitForSleepResponse(TId) ...
+                    , #stdout ) ~> releaseExecutor ~> waitForSleepResponse(TId) ...
        </k>
        <foreignInstances> _ => true </foreignInstances>
        <tidCount> TId => TId +Int 1 </tidCount>
@@ -1214,6 +1215,7 @@ A simple hook to make the process wait
          => . ...
         </k> ...
        </instance>
+       <executorAvailable> true => false </executorAvailable>
 
   rule <instances>
        (<instance>
