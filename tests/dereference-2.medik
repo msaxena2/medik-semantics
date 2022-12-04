@@ -3,6 +3,7 @@ machine Indirect {
   init state Foo {
     entry(b) {
       x = b;
+      broadcast InitDone;
     }
   }
 }
@@ -16,10 +17,13 @@ machine Direct {
   }
 }
 
-init machine Driver {
+init machine Driver receives InitDone {
+  var obj;
   init state Create {
     entry {
-      var obj = new Direct(2);
+      obj = new Direct(2);
+    }
+    on InitDone do {
       print(obj.x.x); // should print 3
     }
   }
