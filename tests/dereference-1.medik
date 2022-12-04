@@ -1,17 +1,21 @@
 machine Dereference {
   var x;
   init state Foo {
-      entry(a) {
+      entry(a, source) {
       x = a;
+      send source, FooInitialized;
     }
   }
 }
 
 init machine Driver {
+  var obj;
   init state Create {
     entry {
-      var obj = new Dereference(2);
-      print(obj.x); // should print 2
+      obj = new Dereference(2, this);
+    }
+    on FooInitialized do {
+      print(obj.x);
     }
   }
 }
