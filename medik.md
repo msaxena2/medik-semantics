@@ -214,15 +214,8 @@ module MEDIK
 
 ### Machine Template Creation
 
-```k
-
-  syntax KItem ::= "createTransitionSystem"  "(" machineName: Id "," code: Stmt ")"
-                 | "createDeclarationCode"   "(" machineName: Id "," code: Stmt ")"
-                 | "createEventHandlers"     "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createStateDeclarations" "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createEntryBlock"        "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createInitInstances"
-```
+Here we define operations for populating the configuration
+with appropriate information from the machine ASTs.
 
 ```k
   syntax Set ::= "asSet" "(" Ids ")" [function]
@@ -230,7 +223,13 @@ module MEDIK
   rule asSet(I:Id, Is:Ids) => SetItem(I) asSet(Is)
   rule asSet(.Ids)         => .Set
 
-  syntax KItem ::= "createMachineDefs" "(" Stmt ")"
+  syntax KItem ::= "createMachineDefs"       "(" Stmt ")"
+                 | "createTransitionSystem"  "(" machineName: Id "," code: Stmt ")"
+                 | "createDeclarationCode"   "(" machineName: Id "," code: Stmt ")"
+                 | "createEventHandlers"     "(" machineName: Id "," stateName: Id "," code: Stmt ")"
+                 | "createStateDeclarations" "(" machineName: Id "," stateName: Id "," code: Stmt ")"
+                 | "createEntryBlock"        "(" machineName: Id "," stateName: Id "," code: Stmt ")"
+                 | "createInitInstances"
 
   rule createMachineDefs(S Ss) => createMachineDefs(S) ~> createMachineDefs(Ss)
   rule <k> createMachineDefs(machine Name receives InEvents ({ Code } #as CodeBlock:Block))
@@ -390,10 +389,18 @@ module MEDIK
 
   rule createEventHandlers(_, _, _) => . [owise]
 
+```
+
+Here we define operations for starting execution in the
+initial state of the initial instance, and the instance
+for handling external communications.
+
+```k
   syntax KItem ::= "createMainInstance"
                  | "createExternHandlerInstance"
                  | "readExternInput"
                  | "processExternInput" "(" IOJSON ")"
+
 ```
 
 ```concrete
@@ -628,16 +635,10 @@ is scheduled. The *caller* does not give up control.
 
 ```
 
+The `instance` construct simple wraps the `id` of an
+instance.
 
 ```k
-  syntax KItem ::= "execEntryCode"   "(" stateName: Id "," entryArgs: Vals ")"
-                 | "execEntryBlock"  "(" Vals ")"
-                 | "enterInitState"  "(" Vals ")"
-                 | "unblockInstance" "(" instanceId: Int ")"
-                 | "unblockCaller"
-                 | "execEventHandlers"
-                 | "dequeueEvent"
-
   syntax Val           ::= "instance" "(" instanceId: Int ")"
   syntax StandaloneExp ::= Val
 
@@ -827,29 +828,6 @@ it is unblocked before the switch occurs.
   rule performBroadcast(_ | _ | .List) => .
 ```
 
-##### Dequeueing Events
-```k
-  rule <k> dequeueEvent =>
-              recordEnv
-           ~> assign(EventArgs | Vals )
-           ~> HandlerCode
-           ~> restoreEnv ... </k>
-       <class> MName </class>
-       <activeState> State </activeState>
-       <inBuffer> (ListItem(eventArgsPair(EventId | Vals)) => .List) ... </inBuffer>
-       <machine>
-        <machineName> MName </machineName>
-        <state>
-          <stateName> State </stateName>
-          <eventHandler>
-            <eventId> EventId </eventId>
-            <eventArgs> EventArgs </eventArgs>
-            <handlerCode> HandlerCode </handlerCode> ...
-          </eventHandler> ...
-        </state> ...
-      </machine>
-
-```
 #### Other Operations
 
 ##### Print
