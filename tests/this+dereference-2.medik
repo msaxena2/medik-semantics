@@ -22,7 +22,9 @@ init machine Driver {
     entry {
       var obj = new Direct(0);
       this.obj = new Direct(2);
+      sleep(1);
       print(this.obj.x.x); // should print 3
+      exit;
     }
   }
 }

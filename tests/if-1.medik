@@ -16,7 +16,10 @@ init machine Driver {
   init state Start {
     entry {
       new IfMachine(0); // negative
+      sleep(1);
       new IfMachine(1); // positive
+      sleep(1);
+      exit;
     }
   }
 }
