@@ -149,10 +149,6 @@ module MEDIK
   rule isKResult(.Vals) => true
 ```
 ```k
-  syntax KItem ::= "createMachineDefs" "(" Stmt ")"
-                 | "closeForeignFds"
-
-
   configuration <instances>
                   <instance multiplicity="*" type="Map">
                     <id> 0 </id>
@@ -225,32 +221,7 @@ module MEDIK
                  | "createEventHandlers"     "(" machineName: Id "," stateName: Id "," code: Stmt ")"
                  | "createStateDeclarations" "(" machineName: Id "," stateName: Id "," code: Stmt ")"
                  | "createEntryBlock"        "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createInstance"          "(" machineName: Id ")"
                  | "createInitInstances"
-```
-
-```concrete
-  syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
-  syntax IOJSON ::= IOError | JSON
-
-  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
-                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
-
-  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
-```
-
-```symbolic
-  syntax IOJSON ::= IOError
-                  | JSON
-                  | "jsonRead" "(" Int ")"            [function]
-                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
-                  | "jsonReadError"  "(" String ")"   [klabel(JSON-RPC_readError), symbol]
-
-  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function]
-
-
-  rule jsonWrite(J, _) => jsonWriteError(J)
-  rule jsonRead(_)     => jsonReadError("unimplemented JSON Read/Write hooks")
 ```
 
 ```k
@@ -258,6 +229,8 @@ module MEDIK
 
   rule asSet(I:Id, Is:Ids) => SetItem(I) asSet(Is)
   rule asSet(.Ids)         => .Set
+
+  syntax KItem ::= "createMachineDefs" "(" Stmt ")"
 
   rule createMachineDefs(S Ss) => createMachineDefs(S) ~> createMachineDefs(Ss)
   rule <k> createMachineDefs(machine Name receives InEvents ({ Code } #as CodeBlock:Block))
@@ -981,6 +954,30 @@ source at runtime.
 ```
 
 #### IPC via extern
+
+```concrete
+  syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
+  syntax IOJSON ::= IOError | JSON
+
+  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
+                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
+
+  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
+```
+
+```symbolic
+  syntax IOJSON ::= IOError
+                  | JSON
+                  | "jsonRead" "(" Int ")"            [function]
+                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
+                  | "jsonReadError"  "(" String ")"   [klabel(JSON-RPC_readError), symbol]
+
+  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function]
+
+
+  rule jsonWrite(J, _) => jsonWriteError(J)
+  rule jsonRead(_)     => jsonReadError("unimplemented JSON Read/Write hooks")
+```
 
 ```k
   syntax KItem ::= "doWriteAndCall" "(" String ")"
