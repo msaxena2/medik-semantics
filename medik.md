@@ -1086,14 +1086,16 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp(S:String)    => S
   rule JSON2Exp({ _ } #as J) => constructObj(J)
 
-  rule  readExternInput => doRead
-
   rule <instance>
         <id> Id </id>
-        <k> doRead => processExternInput(jsonRead(#stdin)) ~> readExternInput ... </k> ...
+        <k>    readExternInput
+         =>    processExternInput(jsonRead(#stdin))
+            ~> releaseExecutor
+            ~> readExternInput ... </k> ...
        </instance>
        <externInstanceId> Id </externInstanceId>
-       <foreignInstances> true </foreignInstances>  [priority(300)]
+       <foreignInstances> true </foreignInstances>
+       <executorAvailable> true => false </executorAvailable> [priority(300)]
 
   rule processExternInput([J:JSON , Js:JSONs])
     => processExternInput(J) ~> processExternInput([ Js ])
@@ -1101,9 +1103,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule processExternInput([ .JSONs ]) => .
 
   rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => . </k>
-
-
-  syntax KItem ::= "doRead"
+  rule <k> processExternInput(#EOF)  => . </k>
 
   rule  <instance>
           <k> processExternInput({ "id"       : IId
@@ -1138,6 +1138,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         <genv> (String2Id(FNameStr) |-> Loc) ... </genv> ...
        </instance>
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
+
 
   syntax KItem ::= JSON2Val(JSON) [function]
 
