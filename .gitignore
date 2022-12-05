@@ -6,3 +6,4 @@
 /.krun*
 /medik-kompiled
 __pycache__
+/.python-version
