@@ -926,6 +926,7 @@ source at runtime.
                         , "interface" : Exp2JSON(IName)
                         , "name"      : "Obtain"
                         , "args"      : [ Field , .JSONs ] }, #stdout)
+          ~> releaseExecutor
           ~> waitForObtainResponse(TId) ...
        </k>
        <instance>
@@ -935,6 +936,13 @@ source at runtime.
        </instance>
        <interfaceName> IName </interfaceName>
        <tidCount> TId => TId +Int 1 </tidCount>
+
+  rule <k> waitForObtainResponse(_) => V ... </k>
+       <inBuffer> (ListItem(eventArgsPair($ObtainResponse | V:Val )) => .List)
+                   ...
+       </inBuffer>
+       <executorAvailable> true => false </executorAvailable>
+
 ```
 
 #### IPC via extern
@@ -1093,7 +1101,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp({ _ } #as J) => constructObj(J)
 ```
 
-#### External Message Handling
+### External Message Handling
 
 The *ExternHandler* instance is scheduled as any other machine.
 It reads the read end of the input buffer, and places the message
@@ -1120,7 +1128,7 @@ in the appropriate input queue.
 
   rule processExternInput([ .JSONs ]) => .
 
-  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => . </k>
+  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => releaseExecutor </k>
   rule <k> processExternInput(#EOF)  => . </k>
 
   rule  <instance>
@@ -1151,21 +1159,27 @@ in the appropriate input queue.
         <genv> (String2Id(FNameStr) |-> Loc) ... </genv> ...
        </instance>
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
+```
 
-  syntax Id ::= "eObtainResponse"
+Ids beginning with a `$` cannot be used in a medik program. This
+prevents any clashes with user-defined events.
+
+```k
+
+  syntax Id ::= "$ObtainResponse"
 
   rule  <instance>
           <k> processExternInput(({ "tid"       : TId:Int
                                   , "id"        : _:String
                                   , "result"    : "obtainResponse"
-                                  , "args"      : Val:JSON , _:JSONs  }) as ) => . ...
+                                  , "args"      : Val:JSON , _:JSONs  }) ) => . ...
           </k> ...
        </instance>
        <instance>
-          <id> TId </id>
-          <inputBuffer> ...
-            (.List => ListItem(eventArgsPair(eObtainResponse | Val)))
-          </inputBuffer> ...
+          <k> waitForObtainResponse(TId) ... </k>
+          <inBuffer>
+            (.List => ListItem(eventArgsPair($ObtainResponse | JSON2Val(Val)))) ...
+          </inBuffer> ...
        </instance>
 
   syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
@@ -1174,7 +1188,7 @@ in the appropriate input queue.
     => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
 
 
-  syntax KItem ::= JSON2Val(JSON) [function]
+  syntax Val ::= JSON2Val(JSON) [function]
 
   rule JSON2Val(I:Int)    => I
   rule JSON2Val(B:Bool)   => B
