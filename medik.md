@@ -398,8 +398,6 @@ for handling external communications.
 ```k
   syntax KItem ::= "createMainInstance"
                  | "createExternHandlerInstance"
-                 | "readExternInput"
-                 | "processExternInput" "(" IOJSON ")"
 
 ```
 
@@ -635,7 +633,7 @@ is scheduled. The *caller* does not give up control.
 
 ```
 
-The `instance` construct simple wraps the `id` of an
+The `instance` construct simply wraps the `id` of an
 instance.
 
 ```k
@@ -817,7 +815,15 @@ it is unblocked before the switch occurs.
   rule <k> send instance(Id) , EventName:Id , ( Args ) ; =>  . ... </k>
        <id> Id </id>
        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
+```
 
+#### Broadcasts
+
+To perform a broadcast, all instances belonging to machine definitions
+that *receive* the event are gathered, followed by a *send* to each of
+these instance.
+
+```k
   rule broadcast EventName:Id , ( Args ) ;
     => performBroadcast ( EventName | Args | getRecievers(EventName))
 
@@ -1085,6 +1091,18 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSON2Exp(I:Int)       => I
   rule JSON2Exp(S:String)    => S
   rule JSON2Exp({ _ } #as J) => constructObj(J)
+```
+
+#### External Message Handling
+
+The *ExternHandler* instance is scheduled as any other machine.
+It reads the read end of the input buffer, and places the message
+in the appropriate input queue.
+
+```k
+
+  syntax KItem ::= "readExternInput"
+                 | "processExternInput" "(" IOJSON ")"
 
   rule <instance>
         <id> Id </id>
@@ -1118,11 +1136,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
         <foreignId> IId </foreignId> ...
        </instance>
 
-  syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
-
-  rule createUpdateStateEvent(IName, FNameStr)
-    => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
-
   rule  <instance>
           <k> processExternInput({ "id"       : IId
                                  , "action"    : "updateField"
@@ -1139,6 +1152,27 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        </instance>
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 
+  syntax Id ::= "eObtainResponse"
+
+  rule  <instance>
+          <k> processExternInput(({ "tid"       : TId:Int
+                                  , "id"        : _:String
+                                  , "result"    : "obtainResponse"
+                                  , "args"      : Val:JSON , _:JSONs  }) as ) => . ...
+          </k> ...
+       </instance>
+       <instance>
+          <id> TId </id>
+          <inputBuffer> ...
+            (.List => ListItem(eventArgsPair(eObtainResponse | Val)))
+          </inputBuffer> ...
+       </instance>
+
+  syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
+
+  rule createUpdateStateEvent(IName, FNameStr)
+    => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
+
 
   syntax KItem ::= JSON2Val(JSON) [function]
 
@@ -1154,16 +1188,6 @@ machines*, i.e. machines with transition systems *external* to the MediK program
 
   rule JSON2Val(null)     => undef
 
-  rule  <instance>
-          <k> processExternInput({ "tid"       : TId:Int
-                                 , "id"        : _:String
-                                 , "result"    : "obtainResponse"
-                                 , "args"      : Val:JSON , _:JSONs  }) => . ...
-          </k> ...
-       </instance>
-       <instance>
-        <k> waitForObtainResponse(TId) => JSON2Val(Val) ... </k> ...
-       </instance>
 ```
 #### Timer Hooks
 
