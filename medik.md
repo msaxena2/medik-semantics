@@ -1167,6 +1167,7 @@ prevents any clashes with user-defined events.
 ```k
 
   syntax Id ::= "$ObtainResponse"
+              | "$SleepDone"
 
   rule  <instance>
           <k> processExternInput(({ "tid"       : TId:Int
@@ -1179,6 +1180,18 @@ prevents any clashes with user-defined events.
           <k> waitForObtainResponse(TId) ... </k>
           <inBuffer>
             (.List => ListItem(eventArgsPair($ObtainResponse | JSON2Val(Val)))) ...
+          </inBuffer> ...
+       </instance>
+
+  rule  <instance>
+          <k> processExternInput(({ "action" : "sleepResponse"
+                                  , "tid"    : TId:Int , _:JSONs }) ) => . ...
+          </k> ...
+       </instance>
+       <instance>
+          <k> waitForSleepResponse(TId) ... </k>
+          <inBuffer>
+            (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ...
           </inBuffer> ...
        </instance>
 
@@ -1203,32 +1216,30 @@ prevents any clashes with user-defined events.
   rule JSON2Val(null)     => undef
 
 ```
-#### Timer Hooks
+#### Sleeps
 
-A simple hook to make the process wait
+A sleep is accomplished by sending a message to an external process
+that responds when the sleep is done.
 
 ```k
-  syntax KItem ::= "waitForSleepResponse" "(" tid: Int ")"
 
   rule <k> sleep(Duration:Int) ;
-        => jsonWrite( { "action"   : "sleep"
-                      , "duration" : Duration
-                      , "tid"      : TId }
-                    , #stdout ) ~> releaseExecutor ~> waitForSleepResponse(TId) ...
+        =>    jsonWrite( { "action"   : "sleep"
+                         , "duration" : Duration
+                         , "tid"      : TId }
+                       , #stdout )
+           ~> releaseExecutor
+           ~> waitForSleepResponse(TId) ...
        </k>
        <foreignInstances> _ => true </foreignInstances>
        <tidCount> TId => TId +Int 1 </tidCount>
 
-  rule <instance>
-        <k> waitForSleepResponse(TId) => . ... </k> ...
-       </instance>
-       <instance>
-        <k> processExternInput({ "action" : "sleepResponse"
-                               , "tid"    : TId
-                               , _:JSONs })
-         => . ...
-        </k> ...
-       </instance>
+  syntax KItem ::= "waitForSleepResponse" "(" tid: Int ")"
+
+  rule <k> waitForSleepResponse(_) => . ... </k>
+       <inBuffer>
+        (ListItem(eventArgsPair($SleepDone | _ )) => .List)  ...
+       </inBuffer>
        <executorAvailable> true => false </executorAvailable>
 
   rule <instances>
