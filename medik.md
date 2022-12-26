@@ -685,7 +685,8 @@ An executor is responsible for *running* a block of code.
 #### Event Handling
 
 A machine is *enabled* if there is an event in the queue that
-can be handled in the active state
+can be handled in the active state. An executor must be available
+to run the event handler.
 
 ```k
   syntax KItem ::= "handleEvents"
@@ -705,6 +706,7 @@ can be handled in the active state
           <handlerCode> HandlerCode </handlerCode> ...
         </eventHandler> ...
       </state>
+      <executorAvailable> true => false </executorAvailable>
 ```
 
 ```k
