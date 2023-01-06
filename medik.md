@@ -696,16 +696,20 @@ to run the event handler.
           ~> HandlerCode
           ~> releaseExecutor ...
        </k>
+       <class> MachineName </class>
        <activeState> Active </activeState>
        <inBuffer> (ListItem(eventArgsPair(EventId | Args)) => .List) ... </inBuffer>
-       <state>
-        <stateName> Active </stateName>
-        <eventHandler>
-          <eventId> EventId </eventId>
-          <eventArgs> Vars </eventArgs>
-          <handlerCode> HandlerCode </handlerCode> ...
-        </eventHandler> ...
-      </state>
+       <machine>
+        <machineName> MachineName </machineName>
+        <state>
+         <stateName> Active </stateName>
+         <eventHandler>
+           <eventId> EventId </eventId>
+           <eventArgs> Vars </eventArgs>
+           <handlerCode> HandlerCode </handlerCode> ...
+         </eventHandler> ...
+        </state> ...
+      </machine>
       <executorAvailable> true => false </executorAvailable>
 ```
 
