@@ -709,6 +709,39 @@ to run the event handler.
       <executorAvailable> true => false </executorAvailable>
 ```
 
+#### Stuck Execution
+
+We assume a machine is `stuck` if the `entry` block
+of a state has been executed, i.e., the machine is waiting for
+an incoming event, and the event at the head of the queue is
+not handled in the machine's active state
+
+```k
+  syntax KItem ::= "stuck"
+
+  rule <k> handleEvents ~> _ => stuck </k>
+       <activeState> ActiveEvent </activeState>
+       <class> MachineName </class>
+       <inBuffer> ListItem(eventArgsPair(InputEvent | _)) ... </inBuffer>
+    requires notBool (eventIsHandled(MachineName, ActiveEvent, InputEvent))
+
+  syntax Bool ::= "eventIsHandled" "(" machineName: Id "," activeState: Id "," inputEvent: Id ")"  [function]
+
+  rule [[ eventIsHandled( MName, ActiveState, InputEvent) => true ]]
+       <machine>
+        <machineName> MName </machineName>
+        <state>
+          <stateName> ActiveState </stateName>
+          <eventHandler>
+            <eventId> InputEvent </eventId> ...
+          </eventHandler> ...
+        </state> ...
+       </machine>
+
+  rule eventIsHandled( _, _, _) => false
+    [owise]
+```
+
 ```k
 
   syntax KItem ::= "asGlobalDecls"   "(" decls: Stmt ")"
