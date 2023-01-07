@@ -807,8 +807,8 @@ it is unblocked before the switch occurs.
 
 ##### Sending Events
 ```k
-  syntax KItem ::= "eventArgsPair"    "(" eventId: Id "|" args: Vals ")"
-                 | "performBroadcast" "(" eventId: Id "|" args: Vals "|" List ")"
+  syntax KItem ::= "eventArgsPair"    "(" eventId: ExtId "|" args: Vals ")"
+                 | "performBroadcast" "(" eventId: Id    "|" args: Vals "|" List ")"
 
   syntax List ::= "getRecievers"    "(" eventId: Id ")"          [function]
   syntax List ::= "getRecieversAux" "(" eventId: Id "|" List ")" [function]
@@ -1200,13 +1200,18 @@ in the appropriate input queue.
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
 ```
 
-Ids beginning with a `$` cannot be used in a medik program. This
-prevents any clashes with user-defined events.
+Ids beginning with a `$` cannot be used in a medik program.
+prevents any clashes with user-defined events, we create a new
+`ExtendedExps` sort containing some constructors for Ids
+prefixed with `$`.
 
 ```k
 
-  syntax Id ::= "$ObtainResponse"
-              | "$SleepDone"
+  syntax ExtId ::= Id
+                 | "$ObtainResponse"
+                 | "$SleepDone"
+
+  syntax Exp ::= ExtId
 
   rule  <instance>
           <k> processExternInput(({ "tid"       : TId:Int
