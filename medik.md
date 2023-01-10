@@ -173,7 +173,7 @@ module MEDIK
                     <states>
                       <state multiplicity="*" type="Map">
                         <stateName> . </stateName>
-                        <stateDeclarations> . </stateDeclarations>
+                        <stateDeclarations> nothing; </stateDeclarations>
                         <entryBlock>  nothing; </entryBlock>
                         <args> .Ids </args>
                         <isInitState> false </isInitState>
