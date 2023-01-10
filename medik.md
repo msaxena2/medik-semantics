@@ -152,7 +152,7 @@ module MEDIK
   configuration <instances>
                   <instance multiplicity="*" type="Map">
                     <id> 0 </id>
-                    <k> createMachineDefs($PGM:Stmt) ~> createInitInstances </k>
+                    <k> populateCells($PGM:Stmt) ~> createInitInstances </k>
                     <env> .Map </env>
                     <genv> .Map </genv>
                     <class> . </class>
@@ -212,147 +212,142 @@ module MEDIK
                 <executorAvailable> true </executorAvailable>
 ```
 
-### Machine Template Creation
+### Configuration Population
 
-Here we define operations for populating the configuration
-with appropriate information from the machine ASTs.
+Here we define semantics for constructing
+the configuration by traversing the program
 
 ```k
+
   syntax Set ::= "asSet" "(" Ids ")" [function]
 
   rule asSet(I:Id, Is:Ids) => SetItem(I) asSet(Is)
   rule asSet(.Ids)         => .Set
 
-  syntax KItem ::= "createMachineDefs"       "(" Stmt ")"
-                 | "createTransitionSystem"  "(" machineName: Id "," code: Stmt ")"
-                 | "createDeclarationCode"   "(" machineName: Id "," code: Stmt ")"
-                 | "createEventHandlers"     "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createStateDeclarations" "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createEntryBlock"        "(" machineName: Id "," stateName: Id "," code: Stmt ")"
-                 | "createInitInstances"
+  syntax KItem ::= "populateCells" "(" program: Stmt ")"
 
-  rule createMachineDefs(S Ss) => createMachineDefs(S) ~> createMachineDefs(Ss)
-  rule <k> createMachineDefs(machine Name receives InEvents ({ Code } #as CodeBlock:Block))
-        => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
+  rule populateCells(M Ms) => populateCells(M) ~> populateCells(Ms)
+
+  syntax KItem ::= "populateMachineCell" "(" machine: Id "," code: Stmt ")"
+
+  rule <k> populateCells(machine MName receives EventList { Code } )
+        => populateMachineCell(MName, Code) ...
+       </k>
        <machines>
-         ( .Bag =>  <machine>
-                      <machineName> Name </machineName>
-                      <receiveEvents> asSet(InEvents) </receiveEvents> ...
-                    </machine> ) ...
+        ( .Bag => <machine>
+                    <machineName> MName </machineName>
+                    <receiveEvents> asSet(EventList) </receiveEvents> ...
+                  </machine> ) ...
        </machines>
 
-  rule <k> createMachineDefs(init machine Name receives InEvents ({ Code } #as CodeBlock))
-        => createDeclarationCode(Name, Code) ~> createTransitionSystem(Name, CodeBlock) ... </k>
+  rule <k> populateCells(init machine MName receives EventList { Code } )
+        => populateMachineCell(MName, Code) ...
+       </k>
        <machines>
-         ( .Bag =>  <machine>
-                      <machineName> Name </machineName>
-                      <receiveEvents> asSet(InEvents) </receiveEvents>
-                      <isInitMachine> true </isInitMachine> ...
-                    </machine> ) ...
+        ( .Bag => <machine>
+                    <machineName> MName </machineName>
+                    <receiveEvents> asSet(EventList) </receiveEvents>
+                    <isInitMachine> true </isInitMachine> ...
+                  </machine> ) ...
        </machines>
 
-  rule <k> createMachineDefs(interface Name receives InEvents { Code })
-        => createDeclarationCode(Name, Code) ... </k>
+  rule <k> populateCells(interface IName receives EventList { Code } )
+        => populateInterfaceCell(IName, Code) ...
+       </k>
        <interfaces>
-         ( .Bag =>  <interface>
-                      <interfaceName> Name </interfaceName>
-                      <interfaceReceiveEvents> asSet(InEvents) </interfaceReceiveEvents> ...
-                    </interface> ) ...
+        ( .Bag => <interface>
+                    <interfaceName> IName </interfaceName>
+                    <interfaceReceiveEvents> asSet(EventList) </interfaceReceiveEvents> ...
+                  </interface> ) ...
        </interfaces>
 
-  rule createDeclarationCode(Name, S Ss)
-    => createDeclarationCode(Name, S) ~> createDeclarationCode(Name, Ss)
+  rule populateMachineCell(M, S Ss)
+    => populateMachineCell(M, S) ~> populateMachineCell(M, Ss)
 
-  rule <k> createDeclarationCode(Name, fun FunName:Id ( Args ) Block) => . ...  </k>
+  rule <k> populateMachineCell(MName, (var _ ;) #as GlobalDecl) => . ... </k>
        <machine>
-        <machineName> Name </machineName>
-        <functions> ( .Bag => <function>
-                                <functionName> FunName </functionName>
-                                <functionArgs> Args </functionArgs>
-                                <functionCode> Block </functionCode> ...
-                              </function> ) ...
-        </functions> ...
+        <machineName> MName </machineName>
+        <declarationCode> S => {S GlobalDecl}:>Stmt </declarationCode> ...
        </machine>
 
-  rule <k> createDeclarationCode(Name, (var _ ;) #as S2 ) => . ... </k>
+  rule <k> populateMachineCell(MName, (_ = _;) #as GlobalDecl) => . ... </k>
+       <machine>
+        <machineName> MName </machineName>
+        <declarationCode> S => {S GlobalDecl}:>Stmt </declarationCode> ...
+       </machine>
+
+  rule <k> populateMachineCell(MName, fun FunName (Args) Block) => . ... </k>
+       <machine>
+        <machineName> MName </machineName>
+        <functions>
+          (.Bag => <function>
+                    <functionName> FunName </functionName>
+                    <functionArgs> Args </functionArgs>
+                    <functionCode> Block </functionCode> ...
+                   </function> ) ...
+        </functions> ...
+      </machine>
+
+  syntax KItem ::= "populateInterfaceCell" "(" name:Id "," code: Stmt ")"
+
+  rule populateInterfaceCell(IName, S Ss)
+    => populateInterfaceCell(IName, S) ~> populateInterfaceCell(IName, Ss)
+
+  rule <k> populateInterfaceCell(IName, (var _;) #as Decl) => . ... </k>
        <interface>
-        <interfaceName> Name </interfaceName>
-        <interfaceDeclarations> S1:Stmt => { S1 S2 }:>Stmt </interfaceDeclarations> ...
+        <interfaceName> IName </interfaceName>
+        <interfaceDeclarations> S => {S Decl}:>Stmt </interfaceDeclarations> ...
        </interface>
 
-  rule createDeclarationCode(_, _) => . [owise]
+  rule populateInterfaceCell(_, nothing;) => .
 
-  rule <k> createDeclarationCode(Name, (var _ ;) #as S2) => . ... </k>
-       <machine>
-        <machineName> Name </machineName>
-        <declarationCode> S1:Stmt => { S1 S2 }:>Stmt </declarationCode> ...
-       </machine>
+  syntax KItem ::= "populateStateCell"   "(" machine: Id "," state: Id "," code: Stmt ")"
 
-  rule <k> createDeclarationCode(Name, (_ = _ ;) #as S2) => . ... </k>
-       <machine>
-        <machineName> Name </machineName>
-        <declarationCode> S1:Stmt => { S1 S2 }:>Stmt </declarationCode> ...
-       </machine>
-
-  rule createTransitionSystem(MName, S Ss)
-    => createTransitionSystem(MName, S) ~> createTransitionSystem(MName, Ss)
-
-  rule createTransitionSystem(MName, { B }) => createTransitionSystem(MName, B)
-
-  rule <k> createTransitionSystem(MName, state SName:Id ({ Code } #as CodeBlock:Block))
-        =>   createStateDeclarations(MName, SName, Code)
-          ~> createEntryBlock(MName, SName, CodeBlock)
-          ~> createEventHandlers(MName, SName, CodeBlock) ...
-       </k>
+  rule <k> populateMachineCell(MName, state SName { Code } )
+        => populateStateCell(MName, SName, Code) ... </k>
        <machine>
         <machineName> MName </machineName>
-        <states> ( .Bag => <state>
-                            <stateName> SName </stateName> ...
-                           </state> ) ...
+        <states>
+          (.Bag => <state>
+                    <stateName> SName </stateName> ...
+                   </state> ) ...
         </states> ...
        </machine>
 
-  rule <k> createTransitionSystem(MName, init state SName:Id ({ Code } #as CodeBlock:Block))
-        =>   createStateDeclarations(MName, SName, Code)
-          ~> createEntryBlock(MName, SName, CodeBlock)
-          ~> createEventHandlers(MName, SName, CodeBlock) ...
-       </k>
+  rule <k> populateMachineCell(MName, init state SName { Code } )
+        => populateStateCell(MName, SName, Code) ... </k>
        <machine>
         <machineName> MName </machineName>
-        <states> ( .Bag => <state>
-                            <stateName> SName </stateName>
-                            <isInitState> true </isInitState> ...
-                           </state> ) ...
+        <states>
+          (.Bag => <state>
+                    <stateName> SName </stateName>
+                    <isInitState> true </isInitState> ...
+                   </state> ) ...
         </states> ...
        </machine>
 
-  rule createTransitionSystem(_, _) => . [owise]
+  rule populateStateCell(MName, SName, S Ss)
+    => populateStateCell(MName, SName, S) ~> populateStateCell(MName, SName, Ss)
 
-  rule createStateDeclarations(MName, SName, S Ss)
-    => createStateDeclarations(MName, SName, S) ~> createStateDeclarations(MName, SName, Ss)
-
-  rule <k> createStateDeclarations(MName, SName, (var _:Id ;) #as S2:Stmt) => . ... </k>
+  rule <k> populateStateCell(MName, SName, (var _;) #as StateDecl) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
           <stateName> SName </stateName>
-          <stateDeclarations> S1:Stmt => {S1 S2}:>Stmt </stateDeclarations> ...
+          <stateDeclarations> S:Stmt => {S StateDecl}:>Stmt </stateDeclarations> ...
         </state> ...
-      </machine>
+       </machine>
 
-
-  rule <k> createStateDeclarations(MName, SName, (_ = _ ;) #as S2:Stmt) => . ... </k>
+  rule <k> populateStateCell(MName, SName, (_ = _;) #as StateDecl) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
           <stateName> SName </stateName>
-          <stateDeclarations> S1:Stmt => {S1 S2}:>Stmt </stateDeclarations> ...
+          <stateDeclarations> S:Stmt => {S StateDecl}:>Stmt </stateDeclarations> ...
         </state> ...
-      </machine>
+       </machine>
 
-  rule createStateDeclarations(_,_,_) => . [owise]
-
-  rule <k> createEntryBlock(MName, SName, entry ( Args:Ids ) Code:Block) => . ... </k>
+  rule <k> populateStateCell(MName, SName, entry(Args) Code:Block) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
@@ -362,32 +357,20 @@ with appropriate information from the machine ASTs.
         </state> ...
        </machine>
 
-  rule createEntryBlock(_, _, { B } => B)
-  rule createEntryBlock(MName, SName, S Ss)
-    => createEntryBlock(MName, SName, S) ~> createEntryBlock(MName, SName, Ss)
-  rule createEntryBlock(_, _, _) => .     [owise]
-
-
-  rule <k> createEventHandlers(MName, SName, on EName ( Args:Ids ) do Code:Block) => . ... </k>
+  rule <k> populateStateCell(MName, SName, on Event (EventArgs) do HandlerCode:Block) => . ... </k>
        <machine>
         <machineName> MName </machineName>
         <state>
           <stateName> SName </stateName>
           <eventHandlers>
             (.Bag => <eventHandler>
-                      <eventId> EName </eventId>
-                      <eventArgs> Args </eventArgs>
-                      <handlerCode> Code </handlerCode> ...
+                      <eventId> Event </eventId>
+                      <eventArgs> EventArgs </eventArgs>
+                      <handlerCode> HandlerCode </handlerCode> ...
                      </eventHandler> ) ...
           </eventHandlers> ...
-       </state> ...
+        </state> ...
       </machine>
-
-  rule createEventHandlers(_, _, { B } => B)
-  rule createEventHandlers(MName, SName, S Ss)
-    => createEventHandlers(MName, SName, S) ~> createEventHandlers(MName, SName, Ss)
-
-  rule createEventHandlers(_, _, _) => . [owise]
 
 ```
 
@@ -397,6 +380,7 @@ for handling external communications.
 
 ```k
   syntax KItem ::= "createMainInstance"
+                 | "createInitInstances"
                  | "createExternHandlerInstance"
 
 ```
