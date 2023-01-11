@@ -733,10 +733,10 @@ not handled in the machine's active state
 
 ```k
 
-  syntax KItem ::= "asGlobalDecls"   "(" decls: Stmt ")"
+  syntax Stmt ::= "asGlobalDecls"   "(" decls: Stmt ")"  [function]
 
   rule asGlobalDecls(S:Stmt Ss:Stmt)
-    => asGlobalDecls(S) ~> asGlobalDecls(Ss)
+    => {asGlobalDecls(S) asGlobalDecls(Ss)}:>Stmt
   rule asGlobalDecls(var Id;) => var this . Id;
   rule asGlobalDecls(S:Stmt) => S               [owise]
 
