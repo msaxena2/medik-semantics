@@ -398,9 +398,10 @@ for handling external communications.
        <externInstanceId> _ => Loc </externInstanceId>
 ````
 
-```symbolic
+```{.symbolic .mcheck}
   rule createInitInstances => createMainInstance
 ```
+
 
 ```k
   rule <k>   createMainInstance
@@ -789,6 +790,20 @@ it is unblocked before the switch occurs.
 ```
 #### Event Handling
 
+Ids beginning with a `$` cannot be used in a medik program.
+prevents any clashes with user-defined events, we create a new
+`ExtendedExps` sort containing some constructors for Ids
+prefixed with `$`.
+
+```k
+
+  syntax ExtId ::= Id
+                 | "$ObtainResponse"
+                 | "$SleepDone"
+
+  syntax Exp ::= ExtId
+```
+
 ##### Sending Events
 ```k
   syntax KItem ::= "eventArgsPair"    "(" eventId: ExtId "|" args: Vals ")"
@@ -863,7 +878,7 @@ these instance.
 
 We treat printing as sending an event to an implicit "tty"
 external machine
-```k
+```concrete
 
   syntax JSON ::= "Val2JSON" "(" Val ")" [function]
 
@@ -940,7 +955,7 @@ external machine
 The `obtainFrom` keyword provides a mechanism in medik to fetch values from an external
 source at runtime.
 
-```k
+```concrete
   syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
 
   rule <k> obtainFrom(instance(Id:Int), Field:String)
@@ -994,7 +1009,7 @@ source at runtime.
   rule jsonRead(_)     => jsonReadError("unimplemented JSON Read/Write hooks")
 ```
 
-```k
+```concrete
   syntax KItem ::= "doWriteAndCall" "(" String ")"
                  | "processCallResult"
 
@@ -1076,7 +1091,7 @@ MediK programs often need to interact with external agents, like
 GUIs and sensors. These agents are represented as *interfaces* or *foreign
 machines*, i.e. machines with transition systems *external* to the MediK program.
 
-```k
+```concrete
   rule <id> SourceId </id>
        <k> createFromInterface( IName, FId ) => wait ... </k>
        ( .Bag =>  <instance>
@@ -1130,7 +1145,7 @@ The *ExternHandler* instance is scheduled as any other machine.
 It reads the read end of the input buffer, and places the message
 in the appropriate input queue.
 
-```k
+```concrete
 
   syntax KItem ::= "readExternInput"
                  | "processExternInput" "(" IOJSON ")"
@@ -1182,20 +1197,6 @@ in the appropriate input queue.
         <genv> (String2Id(FNameStr) |-> Loc) ... </genv> ...
        </instance>
        <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
-```
-
-Ids beginning with a `$` cannot be used in a medik program.
-prevents any clashes with user-defined events, we create a new
-`ExtendedExps` sort containing some constructors for Ids
-prefixed with `$`.
-
-```k
-
-  syntax ExtId ::= Id
-                 | "$ObtainResponse"
-                 | "$SleepDone"
-
-  syntax Exp ::= ExtId
 
   rule  <instance>
           <k> processExternInput(({ "tid"       : TId:Int
@@ -1249,7 +1250,7 @@ prefixed with `$`.
 A sleep is accomplished by sending a message to an external process
 that responds when the sleep is done.
 
-```k
+```concrete
 
   rule <k> sleep(Duration:Int) ;
         =>    jsonWrite( { "action"   : "sleep"

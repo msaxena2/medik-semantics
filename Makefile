@@ -97,7 +97,6 @@ $(LLVM_MCHECK_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 	kompile -d $(LLVM_MCHECK_KOMPILED_DIR)     \
 	--md-selector 'k|mcheck'                   \
 	$(LLVM_MCHECK_OPTS)                        \
-	$(addprefix -ccopt , $(LLVM_CC_OPTS))      \
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
