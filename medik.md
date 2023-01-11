@@ -372,6 +372,7 @@ the configuration by traversing the program
         </state> ...
       </machine>
 
+  rule populateStateCell(_, _, nothing;) => .
 ```
 
 Here we define operations for starting execution in the
