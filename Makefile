@@ -55,11 +55,14 @@ build: build-llvm
 COMMON_OPTS := -w all -Wno unused-symbol
 
 # LLVM-Build Pipeline
-# -------------------
+# ===================
 
-LLVM_BUILD_DIR 	  := $(BUILD_DIR)/llvm
-LLVM_KOMPILED_DIR := $(LLVM_BUILD_DIR)/$(MAIN_DEFN_FILE)-llvm-kompiled
-build-llvm: $(LLVM_KOMPILED_DIR)/make.timestamp
+# Concrete Execution
+# ------------------
+
+LLVM_EXEC_BUILD_DIR    := $(BUILD_DIR)/llvm-exec
+LLVM_EXEC_KOMPILED_DIR := $(LLVM_EXEC_BUILD_DIR)/$(MAIN_DEFN_FILE)-llvm-kompiled
+build-execution: $(LLVM_EXEC_KOMPILED_DIR)/make.timestamp
 
 PLUGIN_FILES := $(PLUGIN_SUBMODULE)/plugin-c/json.cpp $(PLUGIN_SUBMODULE)/plugin-c/k.cpp
 CPP_FILES    := $(PLUGIN_FILES)
@@ -71,9 +74,9 @@ LLVM_CC_OPTS      := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
                      $(abspath $(CPP_FILES))                     \
 		     -std=c++14 -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
 
-$(LLVM_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
-	mkdir -p $(LLVM_BUILD_DIR)
-	kompile -d $(LLVM_KOMPILED_DIR)            \
+$(LLVM_EXEC_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
+	mkdir -p $(LLVM_EXEC_BUILD_DIR)
+	kompile -d $(LLVM_EXEC_KOMPILED_DIR)       \
 	--md-selector 'k|concrete'                 \
 	$(LLVM_KOMPILE_OPTS)                       \
 	$(addprefix -ccopt , $(LLVM_CC_OPTS))      \
@@ -102,19 +105,19 @@ $(HASKELL_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 
 # Regular Medik Tests
 # -------------------
-TEST_LLVM_FILES := $(wildcard tests/*.medik)
+TEST_EXEC_FILES := $(wildcard tests/*.medik)
 
 # Path for the external python script
 SCRIPT_PATH = $(CURDIR)/test-extern
 
-tests-llvm: $(patsubst tests/%.medik, tests/%.medik.run, $(TEST_LLVM_FILES))
+tests-execution: $(patsubst tests/%.medik, tests/%.medik.run, $(TEST_EXEC_FILES))
 
 COMPARE := git --no-pager diff --no-index --ignore-all-space -R
 PROCESS_OUT := "./tests/processOut"
 
 GREEN := \033[0;32m
 RESET := \033[0m
-tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_KOMPILED_DIR)/make.timestamp
+tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_EXEC_KOMPILED_DIR)/make.timestamp
 	@printf '%-35s %s' "$< " "... "
 	@if [ -f tests/$*.medik.in ]; then ./medik --in-file tests/$*.medik.in $<; else ./medik $<; fi > $@
 	@$(COMPARE) $@ $(word 2, $^)
