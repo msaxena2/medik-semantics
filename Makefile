@@ -83,6 +83,24 @@ $(LLVM_EXEC_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
+# Model Checking
+# --------------
+
+LLVM_MCHECK_BUILD_DIR    := $(BUILD_DIR)/llvm-mcheck
+LLVM_MCHECK_KOMPILED_DIR := $(LLVM_MCHECK_BUILD_DIR)/$(MAIN_DEFN_FILE)-llvm-kompiled
+build-model-check: $(LLVM_MCHECK_KOMPILED_DIR)/make.timestamp
+
+LLVM_MCHECK_OPTS := $(COMMON_OPTS) --enable-search \
+
+$(LLVM_MCHECK_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
+	mkdir -p $(LLVM_MCHECK_BUILD_DIR)
+	kompile -d $(LLVM_MCHECK_KOMPILED_DIR)     \
+	--md-selector 'k|mcheck'                   \
+	$(LLVM_MCHECK_OPTS)                        \
+	$(addprefix -ccopt , $(LLVM_CC_OPTS))      \
+	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
+	@touch $@
+
 # Haskell-Build Pipeline
 # ----------------------
 
