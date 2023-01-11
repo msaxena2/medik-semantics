@@ -41,9 +41,9 @@ $(PLUGIN_SUBMODULE)/make.timestamp:
 # Building
 # --------
 
-MAIN_MODULE    := MEDIK
+MAIN_MODULE    := MEDIK-EXECUTION
 SYNTAX_MODULE  := MEDIK-SYNTAX
-export MAIN_DEFN_FILE := medik
+export MAIN_DEFN_FILE := execution
 
 
 COMMON_FILES  :=
@@ -64,7 +64,7 @@ build-llvm: $(LLVM_KOMPILED_DIR)/make.timestamp
 PLUGIN_FILES := $(PLUGIN_SUBMODULE)/plugin-c/json.cpp $(PLUGIN_SUBMODULE)/plugin-c/k.cpp
 CPP_FILES    := $(PLUGIN_FILES)
 
-LLVM_OPTS         := --hook-namespaces JSON
+LLVM_OPTS         := --hook-namespaces JSON --enable-search
 LLVM_KOMPILE_OPTS := $(COMMON_OPTS) $(LLVM_OPTS)
 LLVM_CC_OPTS      := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
 		     -I$(PLUGIN_SUBMODULE)/plugin-c		 \

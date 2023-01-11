@@ -127,11 +127,13 @@ module MEDIK-SYNTAX-EXT
 endmodule
 ```
 
-Semantics
----------
+Core Semantics
+--------------
+
+Here we define semantics of core medik constructs.
 
 ```k
-module MEDIK
+module MEDIK-CORE
   imports MEDIK-SYNTAX-EXT
   imports DOMAINS
   imports JSON
@@ -149,21 +151,28 @@ module MEDIK
   rule isKResult(.Vals) => true
 ```
 ```k
-  configuration <instances>
-                  <instance multiplicity="*" type="Map">
-                    <id> 0 </id>
-                    <k> populateCells($PGM:Stmt) ~> createInitInstances </k>
-                    <env> .Map </env>
-                    <genv> .Map </genv>
-                    <class> . </class>
-                    <fstack> .List </fstack>
-                    <stack> .List </stack>
-                    <inBuffer> .List </inBuffer>
-                    <activeState> . </activeState>
-                    <callerId> . </callerId>
-                    <foreignId> ""    </foreignId>
-                  </instance>
-                </instances>
+  configuration <core>
+                  <activeInstances> ListItem(0) </activeInstances>
+                  <store> .Map </store>
+                  <nextLoc> 1 </nextLoc>
+                  <tidCount> 1 </tidCount>
+                  <executorAvailable> true </executorAvailable>
+                  <instances>
+                    <instance multiplicity="*" type="Map">
+                      <id> 0 </id>
+                      <k> populateCells($PGM:Stmt) ~> createInitInstances </k>
+                      <env> .Map </env>
+                      <genv> .Map </genv>
+                      <class> . </class>
+                      <fstack> .List </fstack>
+                      <stack> .List </stack>
+                      <inBuffer> .List </inBuffer>
+                      <activeState> . </activeState>
+                      <callerId> . </callerId>
+                      <foreignId> ""    </foreignId>
+                    </instance>
+                  </instances>
+                </core>
                 <machines>
                   <machine multiplicity="*" type="Map">
                     <machineName> . </machineName>
@@ -196,20 +205,6 @@ module MEDIK
                     </functions>
                   </machine>
                 </machines>
-                <interfaces>
-                  <interface multiplicity="*" type="Map">
-                    <interfaceName> . </interfaceName>
-                    <interfaceDeclarations> nothing; </interfaceDeclarations>
-                    <interfaceReceiveEvents> .Set </interfaceReceiveEvents>
-                  </interface>
-                </interfaces>
-                <activeInstances> ListItem(0) </activeInstances>
-                <store> .Map </store>
-                <nextLoc> 1 </nextLoc>
-                <foreignInstances> false </foreignInstances>
-                <tidCount> 1 </tidCount>
-                <externInstanceId> . </externInstanceId> // Hack until k is fixed
-                <executorAvailable> true </executorAvailable>
 ```
 
 ### Configuration Population
@@ -251,16 +246,6 @@ the configuration by traversing the program
                   </machine> ) ...
        </machines>
 
-  rule <k> populateCells(interface IName receives EventList { Code } )
-        => populateInterfaceCell(IName, Code) ...
-       </k>
-       <interfaces>
-        ( .Bag => <interface>
-                    <interfaceName> IName </interfaceName>
-                    <interfaceReceiveEvents> asSet(EventList) </interfaceReceiveEvents> ...
-                  </interface> ) ...
-       </interfaces>
-
   rule populateMachineCell(M, S Ss)
     => populateMachineCell(M, S) ~> populateMachineCell(M, Ss)
 
@@ -288,18 +273,6 @@ the configuration by traversing the program
         </functions> ...
       </machine>
 
-  syntax KItem ::= "populateInterfaceCell" "(" name:Id "," code: Stmt ")"
-
-  rule populateInterfaceCell(IName, S Ss)
-    => populateInterfaceCell(IName, S) ~> populateInterfaceCell(IName, Ss)
-
-  rule <k> populateInterfaceCell(IName, (var _;) #as Decl) => . ... </k>
-       <interface>
-        <interfaceName> IName </interfaceName>
-        <interfaceDeclarations> S => {S Decl}:>Stmt </interfaceDeclarations> ...
-       </interface>
-
-  rule populateInterfaceCell(_, nothing;) => .
 
   syntax KItem ::= "populateStateCell"   "(" machine: Id "," state: Id "," code: Stmt ")"
 
@@ -374,49 +347,8 @@ the configuration by traversing the program
 
 ```
 
-Here we define operations for starting execution in the
-initial state of the initial instance, and the instance
-for handling external communications.
-
 ```k
-  syntax KItem ::= "createMainInstance"
-                 | "createInitInstances"
-                 | "createExternHandlerInstance"
-
-```
-
-```concrete
-  rule createInitInstances => createExternHandlerInstance ~> createMainInstance
-
-  rule <k> createExternHandlerInstance => . ... </k>
-       (.Bag =>  <instance>
-                  <id> Loc </id>
-                  <k> readExternInput </k> ...
-                 </instance> )
-       <nextLoc> Loc => Loc +Int 1 </nextLoc>
-       <store> (.Map => (Loc |-> instance(Loc))) ... </store>
-       <externInstanceId> _ => Loc </externInstanceId>
-````
-
-```symbolic
-  rule createInitInstances => createMainInstance
-```
-
-```k
-  rule <k>   createMainInstance
-        =>   asGlobalDecls(MachineDecls)
-          ~> enterState(InitState, .Vals) ...
-       </k>
-       <class> _ => InitMName </class>
-       <machine>
-        <machineName> InitMName </machineName>
-        <declarationCode> MachineDecls </declarationCode>
-        <isInitMachine> true </isInitMachine>
-        <state>
-          <stateName> InitState </stateName>
-          <isInitState> true </isInitState> ...
-        </state> ...
-       </machine>
+  syntax KItem ::= "createInitInstances"
 ```
 
 ### Expression and Statement
@@ -787,10 +719,23 @@ it is unblocked before the switch occurs.
        <env> _ => .Map </env>
        <stack> _ => .List </stack>
 ```
-#### Event Handling
+
+Ids beginning with a `$` cannot be used in a medik program.
+prevents any clashes with user-defined events, we create a new
+`ExtendedExps` sort containing some constructors for Ids
+prefixed with `$`.
+
+```k
+  syntax ExtId ::= Id
+
+  syntax Exp ::= ExtId
+
+```
 
 ##### Sending Events
 ```k
+
+
   syntax KItem ::= "eventArgsPair"    "(" eventId: ExtId "|" args: Vals ")"
                  | "performBroadcast" "(" eventId: Id    "|" args: Vals "|" List ")"
 
@@ -810,16 +755,6 @@ it is unblocked before the switch occurs.
         <receiveEvents> SetItem(Event) ... </receiveEvents> ...
        </machine>
 
-
-  rule [[ getRecieversAux(Event | ListItem(Id) Rest) => ListItem(Id) getRecieversAux(Event | Rest) ]]
-       <instance>
-        <id> Id </id>
-        <class> Name </class> ...
-       </instance>
-       <interface>
-        <interfaceName> Name </interfaceName>
-        <interfaceReceiveEvents> SetItem(Event) ... </interfaceReceiveEvents> ...
-       </interface>
 
   rule getRecieversAux(_     | .List)            => .List
   rule getRecieversAux(Event | ListItem(_) Rest) => getRecieversAux(Event | Rest) [owise]
@@ -859,29 +794,6 @@ these instance.
 
 #### Other Operations
 
-##### Print
-
-We treat printing as sending an event to an implicit "tty"
-external machine
-```k
-
-  syntax JSON ::= "Val2JSON" "(" Val ")" [function]
-
-  rule Val2JSON(<I1, I2>Rat)
-    => "<" +String Int2String(I1) +String "," +String Int2String(I2) +String ">Rat"
-  rule Val2JSON(I:Int)      => I
-  rule Val2JSON(S:String)   => S
-  rule Val2JSON(undef)      => "undef"
-  rule Val2JSON(B:Bool)     => Bool2String(B)
-
-  rule <k> print(V:Val) ;
-        => jsonWrite( { "action" : "print"
-                      , "args"   : [Val2JSON(V)] }
-                    , #stdout)  ...
-       </k>
-       <tidCount> TId => TId +Int 1 </tidCount>
-
-```
 
 #### If/While/In
 
@@ -935,353 +847,6 @@ external machine
 
 ```
 
-#### Semantics of Obtain
-
-The `obtainFrom` keyword provides a mechanism in medik to fetch values from an external
-source at runtime.
-
 ```k
-  syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
-
-  rule <k> obtainFrom(instance(Id:Int), Field:String)
-        =>   jsonWrite( { "id"        : FId
-                        , "tid"       : TId
-                        , "interface" : Exp2JSON(IName)
-                        , "name"      : "Obtain"
-                        , "args"      : [ Field , .JSONs ] }, #stdout)
-          ~> releaseExecutor
-          ~> waitForObtainResponse(TId) ...
-       </k>
-       <instance>
-        <id> Id </id>
-        <class> IName </class>
-        <foreignId> FId </foreignId> ...
-       </instance>
-       <interfaceName> IName </interfaceName>
-       <tidCount> TId => TId +Int 1 </tidCount>
-
-  rule <k> waitForObtainResponse(_) => V ... </k>
-       <inBuffer> (ListItem(eventArgsPair($ObtainResponse | V:Val )) => .List)
-                   ...
-       </inBuffer>
-       <executorAvailable> true => false </executorAvailable>
-
-```
-
-#### IPC via extern
-
-```concrete
-  syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
-  syntax IOJSON ::= IOError | JSON
-
-  syntax IOJSON ::= "jsonRead" "(" Int ")"            [function, hook(JSON.read)]
-                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
-
-  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
-```
-
-```symbolic
-  syntax IOJSON ::= IOError
-                  | JSON
-                  | "jsonRead" "(" Int ")"            [function]
-                  | "jsonWriteError" "(" JSON ")"     [klabel(JSON-RPC_putResponseError), symbol]
-                  | "jsonReadError"  "(" String ")"   [klabel(JSON-RPC_readError), symbol]
-
-  syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function]
-
-
-  rule jsonWrite(J, _) => jsonWriteError(J)
-  rule jsonRead(_)     => jsonReadError("unimplemented JSON Read/Write hooks")
-```
-
-```k
-  syntax KItem ::= "doWriteAndCall" "(" String ")"
-                 | "processCallResult"
-
-  syntax JSON  ::= "Exp2JSON"   "(" Exp ")"  [function]
-  syntax JSONs ::= "Exps2JSONs" "(" Vals ")" [function]
-                 | "Obj2JSONs"  "(" Map ")"  [function]
-
-  syntax ValOrJSON ::= Val | JSON
-
-  syntax Exp ::= ValOrJSON
-               | "JSON2Obj"     "(" ValOrJSON ")"
-               | "constructObj" "(" ValOrJSON ")"
-               | "result2Obj"   "(" JSON ")"
-               | "JSONs2Obj"    "(" JSONs ")"
-
-  rule Exp2JSON(Name:Id) => Id2String(Name)
-  rule Exp2JSON(Name:Id (Args:Vals))
-    => { "name": Id2String(Name)
-       , "args": [ Exps2JSONs(Args) ] }
-
-  rule Exp2JSON(S:String) => S
-  rule Exp2JSON(I:Int)    => I
-  rule Exp2JSON(B:Bool)   => B
-  rule Exp2JSON(undef)    => "undef"
-
-  rule [[ Exp2JSON(instance(Id)) => { Obj2JSONs(GEnv) } ]]
-       <instance>
-        <id> Id </id>
-        <genv> GEnv </genv> ...
-       </instance>
-
-  rule [[ Obj2JSONs((Id |-> Pointer) GEnv)
-    =>    Id2String(Id) : Exp2JSON(Value) , Obj2JSONs(GEnv) ]]
-       <store> (Pointer |-> Value) ... </store>
-
-  rule Obj2JSONs( .Map ) => .JSONs
-
-  rule Exps2JSONs(E, Es) => Exp2JSON(E) , Exps2JSONs(Es)
-  rule Exps2JSONs(.Vals) => .JSONs
-
-
-  rule result2Obj({ "result" : S:String })                => S
-  rule result2Obj({ "result" : I:Int })                   => I
-  rule result2Obj({ "result" : null })                    => undef
-  rule result2Obj({ "result" : (({ _:JSONs }) #as Obj )}) => constructObj(Obj)
-
-  rule JSON2Obj(Field : I:Int)
-    => var this.String2Id(Field); this.String2Id(Field) = I;
-
-  rule JSON2Obj(Field : S:String)
-    => var this.String2Id(Field); this.String2Id(Field) = S;
-
-  rule JSON2Obj(Field : null)
-    => var this.String2Id(Field); this.String2Id(Field) = undef;
-
-  rule JSON2Obj(Field : B:Bool)
-    => var this.String2Id(Field); this.String2Id(Field) = B;
-
-  rule JSON2Obj(Field : (({ _:JSONs }) #as Obj ))
-    => var this.String2Id(Field); this.String2Id(Field) = constructObj(Obj);
-
-  rule JSONs2Obj(J:JSON, Js:JSONs) => JSON2Obj(J) ~> JSONs2Obj(Js)
-  rule JSONs2Obj(.JSONs)           => .
-
-  rule <id> SourceId  </id>
-       <k> constructObj( { Pairs:JSONs } ) => wait ... </k>
-       ( .Bag =>  <instance>
-                    <k> JSONs2Obj(Pairs) ~> unblockCaller </k>
-                    <id> Loc </id>
-                    <callerId> SourceId </callerId> ...
-                  </instance> )
-       <nextLoc> Loc:Int => Loc +Int 1 </nextLoc>
-       <store> (.Map => (Loc |-> instance(Loc))) ... </store>
-```
-
-#### Infrastructure for Foreign Machines
-
-MediK programs often need to interact with external agents, like
-GUIs and sensors. These agents are represented as *interfaces* or *foreign
-machines*, i.e. machines with transition systems *external* to the MediK program.
-
-```k
-  rule <id> SourceId </id>
-       <k> createFromInterface( IName, FId ) => wait ... </k>
-       ( .Bag =>  <instance>
-                    <id> Loc </id>
-                    <k> asGlobalDecls(InterfaceDecls) ~> unblockCaller </k>
-                    <class> IName </class>
-                    <callerId> SourceId </callerId>
-                    <foreignId> FId </foreignId> ...
-                  </instance> )
-       <nextLoc> Loc => Loc +Int 1 </nextLoc>
-       <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
-       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
-       <interface>
-        <interfaceName> IName </interfaceName>
-        <interfaceDeclarations> InterfaceDecls </interfaceDeclarations> ...
-       </interface>
-       <foreignInstances> _ => true </foreignInstances>
-
-
-  rule <k> send instance(Id) , EventName:Id , ( Args ) ;
-        => jsonWrite( { "id"        : FId
-                      , "tid"       : TId
-                      , "interface" : Exp2JSON(IName)
-                      , "name"      : Exp2JSON(EventName)
-                      , "args"      : [Exps2JSONs(Args)] }, #stdout) ...
-       </k>
-       <instance>
-        <id> Id </id>
-        <class> IName </class>
-        <foreignId> FId </foreignId> ...
-       </instance>
-       <interfaceName> IName </interfaceName>
-       <tidCount> TId => TId +Int 1 </tidCount>
-
-  syntax Exp  ::= "JSON2Exp"   "(" JSON ")"    [function]
-  syntax Exps ::= "JSONs2Exps" "(" JSONs ")"   [function]
-
-  rule JSONs2Exps(J:JSON , Js:JSONs)
-    => JSON2Exp(J) , JSONs2Exps(Js)
-
-  rule JSONs2Exps(.JSONs) => .Exps
-
-  rule JSON2Exp(I:Int)       => I
-  rule JSON2Exp(S:String)    => S
-  rule JSON2Exp({ _ } #as J) => constructObj(J)
-```
-
-### External Message Handling
-
-The *ExternHandler* instance is scheduled as any other machine.
-It reads the read end of the input buffer, and places the message
-in the appropriate input queue.
-
-```k
-
-  syntax KItem ::= "readExternInput"
-                 | "processExternInput" "(" IOJSON ")"
-
-  rule <instance>
-        <id> Id </id>
-        <k>    readExternInput
-         =>    processExternInput(jsonRead(#stdin))
-            ~> releaseExecutor
-            ~> readExternInput ... </k> ...
-       </instance>
-       <externInstanceId> Id </externInstanceId>
-       <foreignInstances> true </foreignInstances>
-       <executorAvailable> true => false </executorAvailable> [priority(300)]
-
-  rule processExternInput([J:JSON , Js:JSONs])
-    => processExternInput(J) ~> processExternInput([ Js ])
-
-  rule processExternInput([ .JSONs ]) => .
-
-  rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => releaseExecutor </k>
-  rule <k> processExternInput(#EOF)  => . </k>
-
-  rule  <instance>
-          <k> processExternInput({ "id"       : IId
-                                 , "action"    : "broadcast"
-                                 , "eventName" : EName:String
-                                 , "eventArgs" : [ Args:JSONs ]
-                                 , _:JSONs })
-          => broadcast String2Id(EName), (JSONs2Exps(Args));  ...
-          </k> ...
-       </instance>
-       <instance>
-        <foreignId> IId </foreignId> ...
-       </instance>
-
-  rule  <instance>
-          <k> processExternInput({ "id"       : IId
-                                 , "action"    : "updateField"
-                                 , "fieldName" : FNameStr:String
-                                 , "fieldVal"  : NewVal:JSON
-                                 , _:JSONs } )
-          =>  broadcast createUpdateStateEvent(IName, FNameStr) ; ...
-          </k> ...
-       </instance>
-       <instance>
-        <class> IName </class>
-        <foreignId> IId </foreignId>
-        <genv> (String2Id(FNameStr) |-> Loc) ... </genv> ...
-       </instance>
-       <store> (Loc |-> (_ => JSON2Exp(NewVal))) ... </store>
-```
-
-Ids beginning with a `$` cannot be used in a medik program.
-prevents any clashes with user-defined events, we create a new
-`ExtendedExps` sort containing some constructors for Ids
-prefixed with `$`.
-
-```k
-
-  syntax ExtId ::= Id
-                 | "$ObtainResponse"
-                 | "$SleepDone"
-
-  syntax Exp ::= ExtId
-
-  rule  <instance>
-          <k> processExternInput(({ "tid"       : TId:Int
-                                  , "id"        : _:String
-                                  , "result"    : "obtainResponse"
-                                  , "args"      : Val:JSON , _:JSONs  }) ) => . ...
-          </k> ...
-       </instance>
-       <instance>
-          <k> waitForObtainResponse(TId) ... </k>
-          <inBuffer>
-            (.List => ListItem(eventArgsPair($ObtainResponse | JSON2Val(Val)))) ...
-          </inBuffer> ...
-       </instance>
-
-  rule  <instance>
-          <k> processExternInput(({ "action" : "sleepResponse"
-                                  , "tid"    : TId:Int , _:JSONs }) ) => . ...
-          </k> ...
-       </instance>
-       <instance>
-          <k> waitForSleepResponse(TId) ... </k>
-          <inBuffer>
-            (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ...
-          </inBuffer> ...
-       </instance>
-
-  syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
-
-  rule createUpdateStateEvent(IName, FNameStr)
-    => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
-
-
-  syntax Val ::= JSON2Val(JSON) [function]
-
-  rule JSON2Val(I:Int)    => I
-  rule JSON2Val(B:Bool)   => B
-  rule JSON2Val(S:String) => S
-    requires  (findChar(S, "<", 0) ==Int -1)
-      andBool (rfindString(S, ">Rat", 0) ==Int -1)
-  rule JSON2Val(S:String)
-    =>     String2Int(substrString(S, 1                         , findChar(S, ",", 0)))
-      /Rat String2Int(substrString(S, findChar(S, ",", 0) +Int 1, lengthString(S) -Int lengthString(">Rat")))
-    [owise]
-
-  rule JSON2Val(null)     => undef
-
-```
-#### Sleeps
-
-A sleep is accomplished by sending a message to an external process
-that responds when the sleep is done.
-
-```k
-
-  rule <k> sleep(Duration:Int) ;
-        =>    jsonWrite( { "action"   : "sleep"
-                         , "duration" : Duration
-                         , "tid"      : TId }
-                       , #stdout )
-           ~> releaseExecutor
-           ~> waitForSleepResponse(TId) ...
-       </k>
-       <foreignInstances> _ => true </foreignInstances>
-       <tidCount> TId => TId +Int 1 </tidCount>
-
-  syntax KItem ::= "waitForSleepResponse" "(" tid: Int ")"
-
-  rule <k> waitForSleepResponse(_) => . ... </k>
-       <inBuffer>
-        (ListItem(eventArgsPair($SleepDone | _ )) => .List)  ...
-       </inBuffer>
-       <executorAvailable> true => false </executorAvailable>
-
-  rule <instances>
-       (<instance>
-          <k> exit ... </k>
-          ...
-        </instance> _ ) => .Bag
-       </instances>
-
-```
-#### Simple Functions For Conversions
-
-```k
-  rule parseInt(S:String) => String2Int(S)
-
 endmodule
 ```
