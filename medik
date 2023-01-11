@@ -7,8 +7,8 @@ from fractions import Fraction
 import asyncio, logging, os, sys, json, tempfile, json, re
 
 base_dir     = Path(__file__).parents[0]
-kompiled_dir = base_dir     / '.build' / 'llvm' / 'medik-llvm-kompiled'
-krelease_dir = base_dir     / 'ext'    / 'k'    / 'k-distribution' / 'target' / 'release' / 'k'
+kompiled_dir = base_dir     / '.build' / 'llvm-exec' / 'medik-llvm-kompiled'
+krelease_dir = base_dir     / 'ext'    / 'k'         / 'k-distribution' / 'target' / 'release' / 'k'
 kbin_dir     = krelease_dir / 'bin'
 
 
