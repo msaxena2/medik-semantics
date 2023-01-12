@@ -75,6 +75,7 @@ module MEDIK-SYNTAX
                 | "on" Id "do" Block                              [macro]
                 | "on" Id "(" Ids ")" "do" Block
                 | "fun" Id "(" Ids ")" Block
+                | NonDetStmt
                 | Exp "in" "{" CaseDecl "}"
                 | StateDecl
                 > "machine" Id Block                              [macro]
@@ -95,6 +96,18 @@ module MEDIK-SYNTAX
 
   syntax Block ::= "{" "}"                                 [macro]
                  | "{" Stmt "}"
+
+  // Declarations for symbolic execution/model-checking
+  syntax NonDetStmt
+```
+
+### Non-deterministic choice
+
+```{.mcheck .symbolic}
+  syntax NonDetStmt ::= "either" Block "or" Block
+```
+
+```k
 endmodule
 ```
 ### Macros
@@ -1290,6 +1303,14 @@ that responds when the sleep is done.
        </instances>
 
 ```
+
+#### Non-deterministic choice
+
+```{.mcheck .symbolic}
+  rule either B or _ => B
+  rule either _ or B => B
+```
+
 #### Simple Functions For Conversions
 
 ```k
