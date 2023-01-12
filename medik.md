@@ -875,12 +875,7 @@ these instance.
 
 #### Other Operations
 
-##### Print
-
-We treat printing as sending an event to an implicit "tty"
-external machine
-```concrete
-
+```k
   syntax JSON ::= "Val2JSON" "(" Val ")" [function]
 
   rule Val2JSON(<I1, I2>Rat)
@@ -889,7 +884,14 @@ external machine
   rule Val2JSON(S:String)   => S
   rule Val2JSON(undef)      => "undef"
   rule Val2JSON(B:Bool)     => Bool2String(B)
+```
 
+##### Print
+
+We treat printing as sending an event to an implicit "tty"
+external machine
+
+```concrete
   rule <k> print(V:Val) ;
         => jsonWrite( { "action" : "print"
                       , "args"   : [Val2JSON(V)] }
@@ -897,6 +899,14 @@ external machine
        </k>
        <tidCount> TId => TId +Int 1 </tidCount>
 
+```
+
+```{.mcheck .symbolic}
+  rule print(S:String); => #write(#stdout, S)
+  rule print(I:Int);    => #write(#stdout, Int2String(I))
+  rule print(B:Bool);   => #write(#stdout, Bool2String(B))
+  rule print(S);        => #write(#stdout, "undef")
+    requires notBool (isString(S) orBool isInt(S) orBool isBool(S))
 ```
 
 #### If/While/In
