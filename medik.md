@@ -1304,6 +1304,22 @@ that responds when the sleep is done.
 
 ```
 
+#### Symbolic Sleep
+
+For symbolic execution and model-checking, we don't need to
+actually perform the `sleep`. Instead, we simply yield control
+and gain it back to explore interleavings.
+
+```{.mcheck .symbolic}
+
+  syntax KItem ::= "obtainExecutor"
+
+  rule sleep(_) ; => releaseExecutor ~> obtainExecutor
+
+  rule <k> obtainExecutor => . ... </k>
+       <executorAvailable> true => false </executorAvailable>
+```
+
 #### Non-deterministic choice
 
 ```{.mcheck .symbolic}
