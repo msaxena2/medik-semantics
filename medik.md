@@ -191,6 +191,7 @@ module MEDIK
                         <args> .Ids </args>
                         <isInitState> false </isInitState>
                         <exitBlock> . </exitBlock>
+                        <handledEventIds> .Set </handledEventIds>
                         <eventHandlers>
                           <eventHandler multiplicity="*" type="Set">
                             <eventId> . </eventId>
@@ -378,6 +379,7 @@ the configuration by traversing the program
         <machineName> MName </machineName>
         <state>
           <stateName> SName </stateName>
+          <handledEventIds> (.Set => SetItem(Event)) ... </handledEventIds>
           <eventHandlers>
             (.Bag => <eventHandler>
                       <eventId> Event </eventId>
@@ -726,27 +728,19 @@ not handled in the machine's active state
   syntax KItem ::= "stuck"
 
   rule <k> handleEvents ~> _ => stuck </k>
-       <activeState> ActiveEvent </activeState>
+       <activeState> ActiveState </activeState>
        <class> MachineName </class>
        <inBuffer> ListItem(eventArgsPair(InputEvent | _)) ... </inBuffer>
-       <executorAvailable> true </executorAvailable>
-    requires (eventIsHandled(MachineName, ActiveEvent, InputEvent) ==K false)
-
-  syntax Bool ::= "eventIsHandled" "(" machineName: Id "," activeState: Id "," inputEvent: Id ")"  [function, total]
-
-  rule [[ eventIsHandled( MName, ActiveState, InputEvent) => true ]]
        <machine>
-        <machineName> MName </machineName>
+        <machineName> MachineName </machineName>
         <state>
-          <stateName> ActiveState </stateName>
-          <eventHandler>
-            <eventId> InputEvent </eventId> ...
-          </eventHandler> ...
+         <stateName> ActiveState </stateName>
+         <handledEventIds> HandledEvents </handledEventIds> ...
         </state> ...
        </machine>
+       <executorAvailable> true </executorAvailable>
+    requires notBool(InputEvent in HandledEvents)
 
-  rule eventIsHandled( _, _, _) => false
-    [owise]
 ```
 
 ```k
