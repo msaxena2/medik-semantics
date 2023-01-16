@@ -224,6 +224,9 @@ module MEDIK
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
                 <executorAvailable> true </executorAvailable>
 ```
+```{.mcheck .symbolic}
+                <output> .List </output>
+```
 
 ### Configuration Population
 
@@ -726,9 +729,10 @@ not handled in the machine's active state
        <activeState> ActiveEvent </activeState>
        <class> MachineName </class>
        <inBuffer> ListItem(eventArgsPair(InputEvent | _)) ... </inBuffer>
-    requires notBool (eventIsHandled(MachineName, ActiveEvent, InputEvent))
+       <executorAvailable> true </executorAvailable>
+    requires (eventIsHandled(MachineName, ActiveEvent, InputEvent) ==K false)
 
-  syntax Bool ::= "eventIsHandled" "(" machineName: Id "," activeState: Id "," inputEvent: Id ")"  [function]
+  syntax Bool ::= "eventIsHandled" "(" machineName: Id "," activeState: Id "," inputEvent: Id ")"  [function, total]
 
   rule [[ eventIsHandled( MName, ActiveState, InputEvent) => true ]]
        <machine>
@@ -915,11 +919,12 @@ external machine
 ```
 
 ```{.mcheck .symbolic}
-  rule print(S:String); => #write(#stdout, S)
-  rule print(I:Int);    => #write(#stdout, Int2String(I))
-  rule print(B:Bool);   => #write(#stdout, Bool2String(B))
-  rule print(S);        => #write(#stdout, "undef")
-    requires notBool (isString(S) orBool isInt(S) orBool isBool(S))
+  rule <k> print(S:String); => . ... </k>
+       <output> ... .List => ListItem(S) </output>
+  rule <k> print(I:Int); => . ... </k>
+       <output> ... .List => ListItem(Int2String(I)) </output>
+  rule <k> print(B:Bool); => . ... </k>
+       <output> ... .List => ListItem(Bool2String(B)) </output>
 ```
 
 #### If/While/In
