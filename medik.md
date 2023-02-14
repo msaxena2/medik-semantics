@@ -23,11 +23,15 @@ module MEDIK-SYNTAX
                          | "createFromInterface" "(" Id "," String ")" [strict(2)]
                          | Id "(" Exps ")"                             [strict(2)]
                          | "exit"
+
+  syntax UndefExp ::= "undef"
+
   syntax Exp ::= Id
                | Val
                | Rat
                | FloatLiteral
                | "this"
+               | UndefExp
                | "obtainFrom" "(" Exp "," Exp ")"            [strict]
                | "(" Exp ")"                                 [bracket]
                > Exp "." Exp                                 [strict(1), left]
@@ -152,7 +156,7 @@ module MEDIK
   imports RAT
   imports RAT-COMMON
 
-  syntax Val  ::= "null" | "undef" | Rat | Bool | String
+  syntax Val  ::= "null" | UndefExp | Rat | Bool | String
 
   syntax KResult ::= Val
                    | Vals
