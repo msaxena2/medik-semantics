@@ -1194,7 +1194,7 @@ in the appropriate input queue.
   rule processExternInput([ .JSONs ]) => .
 
   rule <k> processExternInput({ "action" : "exit" , _:JSONs }) ~> _  => releaseExecutor </k>
-  rule <k> processExternInput(#EOF)  => . </k>
+  rule <k> processExternInput(#EOF) ~> _ => releaseExecutor </k>
 
   rule  <instance>
           <k> processExternInput({ "id"       : IId
