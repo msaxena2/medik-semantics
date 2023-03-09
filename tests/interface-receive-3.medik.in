@@ -1,0 +1,1 @@
+[{"id":"ex","action":"broadcast","eventName":"eBool","eventArgs":[true]},{"id":"ex","action":"broadcast","eventName":"eBool","eventArgs":[false]},{"action":"exit"}]

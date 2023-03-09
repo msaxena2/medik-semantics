@@ -1,0 +1,32 @@
+interface Ex { }
+
+machine BoolReceiver receives eBool {
+  var src;
+  init state Start {
+    entry(src) {
+      this.src = src;
+    }
+    on eBool(arg) do {
+      send src, eInternal, (arg);
+      goto Start(src);
+    }
+  }
+}
+
+
+init machine Driver {
+  init state Start {
+    entry {
+      createFromInterface(Ex, "ex");
+      new BoolReceiver(this);
+      goto Wait;
+    }
+  }
+  state Wait {
+    on eInternal(arg) do {
+      print(arg + "\n");
+      goto Wait;
+    }
+  }
+}
+

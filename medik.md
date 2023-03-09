@@ -1162,8 +1162,18 @@ machines*, i.e. machines with transition systems *external* to the MediK program
   rule JSONs2Exps(.JSONs) => .Exps
 
   rule JSON2Exp(I:Int)       => I
-  rule JSON2Exp(S:String)    => S
+  rule JSON2Exp(B:Bool)      => B
   rule JSON2Exp({ _ } #as J) => constructObj(J)
+
+  rule JSON2Exp(S:String) => S
+    requires  (findChar(S, "<", 0) ==Int -1)
+      andBool (rfindString(S, ">Rat", 0) ==Int -1)
+  rule JSON2Exp(S:String)
+    =>     String2Int(substrString(S, 1                         , findChar(S, ",", 0)))
+      /Rat String2Int(substrString(S, findChar(S, ",", 0) +Int 1, lengthString(S) -Int lengthString(">Rat")))
+    [owise]
+
+  rule JSON2Exp(null)     => undef
 ```
 
 ### External Message Handling
@@ -1209,6 +1219,12 @@ in the appropriate input queue.
         <foreignId> IId </foreignId> ...
        </instance>
 
+  syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
+
+  rule createUpdateStateEvent(IName, FNameStr)
+    => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
+
+
   rule  <instance>
           <k> processExternInput({ "id"       : IId
                                  , "action"    : "updateField"
@@ -1235,7 +1251,7 @@ in the appropriate input queue.
        <instance>
           <k> waitForObtainResponse(TId) ... </k>
           <inBuffer>
-            (.List => ListItem(eventArgsPair($ObtainResponse | JSON2Val(Val)))) ...
+            (.List => ListItem(eventArgsPair($ObtainResponse | { JSON2Exp(Val) }:>Val))) ...
           </inBuffer> ...
        </instance>
 
@@ -1250,26 +1266,6 @@ in the appropriate input queue.
             (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ...
           </inBuffer> ...
        </instance>
-
-  syntax Id ::= "createUpdateStateEvent" "(" Id "," String ")" [function]
-
-  rule createUpdateStateEvent(IName, FNameStr)
-    => String2Id(Id2String(IName) +String "_" +String FNameStr +String "_update")
-
-
-  syntax Val ::= JSON2Val(JSON) [function]
-
-  rule JSON2Val(I:Int)    => I
-  rule JSON2Val(B:Bool)   => B
-  rule JSON2Val(S:String) => S
-    requires  (findChar(S, "<", 0) ==Int -1)
-      andBool (rfindString(S, ">Rat", 0) ==Int -1)
-  rule JSON2Val(S:String)
-    =>     String2Int(substrString(S, 1                         , findChar(S, ",", 0)))
-      /Rat String2Int(substrString(S, findChar(S, ",", 0) +Int 1, lengthString(S) -Int lengthString(">Rat")))
-    [owise]
-
-  rule JSON2Val(null)     => undef
 
 ```
 #### Sleeps
