@@ -228,6 +228,7 @@ module MEDIK
                 <tidCount> 1 </tidCount>
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
                 <executorAvailable> true </executorAvailable>
+                <stuck> false </stuck>
 ```
 ```{.mcheck .symbolic}
                 <output> .List </output>
@@ -743,6 +744,7 @@ not handled in the machine's active state
         </state> ...
        </machine>
        <executorAvailable> true </executorAvailable>
+       <stuck> _ => true </stuck>
     requires notBool(InputEvent in HandledEvents)
 
 ```
