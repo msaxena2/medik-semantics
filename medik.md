@@ -232,6 +232,9 @@ module MEDIK
 ```
 ```{.mcheck .symbolic}
                 <output> .List </output>
+                <sleeping> .List </sleeping>
+                <slept> .List </slept>
+                <elapsed> 0 </elapsed>
 ```
 
 ### Configuration Population
@@ -1285,7 +1288,9 @@ that responds when the sleep is done.
        </k>
        <foreignInstances> _ => true </foreignInstances>
        <tidCount> TId => TId +Int 1 </tidCount>
+```
 
+```k
   syntax KItem ::= "waitForSleepResponse" "(" tid: Int ")"
 
   rule <k> waitForSleepResponse(_) => . ... </k>
@@ -1305,18 +1310,56 @@ that responds when the sleep is done.
 
 #### Symbolic Sleep
 
-For symbolic execution and model-checking, we don't need to
-actually perform the `sleep`. Instead, we simply yield control
-and gain it back to explore interleavings.
+We assume a discrete model of time, i.e., a time-epoch is a
+Nat.
+
+Upon encountering a sleep, the machine's Tid is added to
+a list of sleeping machines, and the control is ceeded.
 
 ```{.mcheck .symbolic}
 
-  syntax KItem ::= "obtainExecutor"
+  syntax KItem ::= sleepWait(duration: Int)
 
-  rule sleep(_) ; => releaseExecutor ~> obtainExecutor
+  rule <k> sleep(N); => sleepWait(N) ... </k>
+       <id> Id </id>
+       <executorAvailable> false => true </executorAvailable>
+       <sleeping> Sleeping => (Sleeping ListItem(Id)) </sleeping>
+        requires notBool (Id in Sleeping)
+```
 
-  rule <k> obtainExecutor => . ... </k>
+If no "instantaneous" rule can apply, the sleeps are
+processed, until at least one machine's sleep is completed.
+
+```{.mcheck .symbolic}
+
+  rule <sleeping> Sleeping </sleeping>
+       <slept> .List </slept>
        <executorAvailable> true => false </executorAvailable>
+        requires Sleeping =/=K .List                          [priority(200)]
+
+  rule <k> sleepWait(N => N -Int 1) ... </k>
+       <id> Id </id>
+       <sleeping> ListItem(Id) => .List ... </sleeping>
+       <slept> ... (.List => ListItem(Id)) </slept>
+       <executorAvailable> false </executorAvailable>
+        requires N >Int 0
+
+  rule <k> sleepWait(0) => waitForSleepResponse(-1) ... </k>
+       <id> Id </id>
+       <inBuffer> (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ... </inBuffer>
+       <sleeping> ListItem(Id) => .List ... </sleeping>
+       <executorAvailable> false </executorAvailable>
+
+  rule <sleeping> .List => Slept </sleeping>
+       <slept> Slept => .List </slept>
+       <elapsed> E => E +Int 1 </elapsed>
+       <executorAvailable> false => true </executorAvailable>
+        requires Slept =/=K .List
+
+  rule <sleeping> .List </sleeping>
+       <slept> .List </slept>
+       <executorAvailable> false => true </executorAvailable> [priority(200)]
+
 ```
 
 #### Non-deterministic choice
