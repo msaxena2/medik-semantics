@@ -1318,12 +1318,11 @@ a list of sleeping machines, and the control is ceeded.
 
 ```{.mcheck .symbolic}
 
-  syntax KItem ::= sleepWait(duration: Int)
-
-  rule <k> sleep(N); => sleepWait(N) ... </k>
+  rule <k> sleep(_); ... </k>
        <id> Id </id>
        <executorAvailable> false => true </executorAvailable>
-       <sleeping> Sleeping => (Sleeping ListItem(Id)) </sleeping>
+       <sleeping> Sleeping (.List => ListItem(Id)) </sleeping>
+       <slept> .List </slept>
         requires notBool (Id in Sleeping)
 ```
 
@@ -1337,14 +1336,14 @@ processed, until at least one machine's sleep is completed.
        <executorAvailable> true => false </executorAvailable>
         requires Sleeping =/=K .List                          [priority(200)]
 
-  rule <k> sleepWait(N => N -Int 1) ... </k>
+  rule <k> sleep(N => N -Int 1); ... </k>
        <id> Id </id>
        <sleeping> ListItem(Id) => .List ... </sleeping>
        <slept> ... (.List => ListItem(Id)) </slept>
        <executorAvailable> false </executorAvailable>
-        requires N >Int 0
+        requires N >Int 0                                     [priority(200)]
 
-  rule <k> sleepWait(0) => waitForSleepResponse(-1) ... </k>
+  rule <k> sleep(0); => waitForSleepResponse(-1) ... </k>
        <id> Id </id>
        <inBuffer> (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ... </inBuffer>
        <sleeping> ListItem(Id) => .List ... </sleeping>
