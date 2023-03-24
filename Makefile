@@ -120,23 +120,21 @@ $(HASKELL_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 # Tests
 # -----
 
+COMPARE := git --no-pager diff --no-index --ignore-all-space -R
+GREEN   := \033[0;32m
+RESET   := \033[0m
+
 # Regular Medik Tests
 # -------------------
-TEST_EXEC_FILES := $(wildcard tests/*.medik)
+TEST_EXECUTION_FILES := $(wildcard tests/execution/*.medik)
 
-# Path for the external python script
-SCRIPT_PATH = $(CURDIR)/test-extern
+tests-execution: $(patsubst tests/execution/%.medik, tests/execution/%.medik.run, $(TEST_EXECUTION_FILES))
 
-tests-execution: $(patsubst tests/%.medik, tests/%.medik.run, $(TEST_EXEC_FILES))
-
-COMPARE := git --no-pager diff --no-index --ignore-all-space -R
-PROCESS_OUT := "./tests/processOut"
-
-GREEN := \033[0;32m
-RESET := \033[0m
-tests/%.medik.run: tests/%.medik tests/%.medik.expected $(LLVM_EXEC_KOMPILED_DIR)/make.timestamp
-	@printf '%-35s %s' "$< " "... "
-	@if [ -f tests/$*.medik.in ]; then ./medik --in-file tests/$*.medik.in $<; else ./medik $<; fi > $@
+tests/execution/%.medik.run: tests/execution/%.medik tests/execution/%.medik.expected $(LLVM_EXEC_KOMPILED_DIR)/make.timestamp
+	@printf '%-45s %s' "$< " "... "
+	@if [ -f tests/execution/$*.medik.in ]; then 		 \
+		./medik -in tests/execution/$*.medik.in $< > $@; \
+		else ./medik $< > $@; fi
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
 
