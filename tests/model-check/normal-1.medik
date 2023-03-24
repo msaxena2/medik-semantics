@@ -1,0 +1,20 @@
+// Model checking for a stuck state should return false
+
+machine A {
+  init state Start {
+    on eFoo do {
+      goto Final;
+    }
+  }
+
+  state Final { }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      var a = new A();
+      send a, eFoo;
+    }
+  }
+}

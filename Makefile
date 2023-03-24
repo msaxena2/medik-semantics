@@ -17,7 +17,7 @@ export PATH
 .PHONY: all clean distclean \
         deps k-deps \
         build \
-        test \
+        tests \
 
 all: build
 
@@ -126,6 +126,7 @@ RESET   := \033[0m
 
 # Regular Medik Tests
 # -------------------
+
 TEST_EXECUTION_FILES := $(wildcard tests/execution/*.medik)
 
 tests-execution: $(patsubst tests/execution/%.medik, tests/execution/%.medik.run, $(TEST_EXECUTION_FILES))
@@ -137,6 +138,25 @@ tests/execution/%.medik.run: tests/execution/%.medik tests/execution/%.medik.exp
 		else ./medik $< > $@; fi
 	@$(COMPARE) $@ $(word 2, $^)
 	@printf "${GREEN}OK ${RESET}\n"
+
+# Model Checking Tests
+# --------------------
+
+TEST_MODEL_CHECK_FILES := $(wildcard tests/model-check/*.medik)
+KRUN_MCHECK 	       := krun  -d $(LLVM_MCHECK_KOMPILED_DIR) --search
+
+tests-model-check: $(patsubst tests/model-check/%.medik, tests/model-check/%.medik.run, $(TEST_MODEL_CHECK_FILES))
+
+tests/model-check/%.medik.run: tests/model-check/%.medik tests/model-check/%.medik.expected $(LLVM_MCHECK_KOMPILED_DIR)/make.timestamp
+	@printf '%-45s %s' "$< " "... "
+	@$(KRUN_MCHECK) --pattern "$$(cat tests/model-check/$*.medik.pattern)" $< > $@
+	@$(COMPARE) $@ $(word 2, $^)
+	@printf "${GREEN}OK ${RESET}\n"
+
+# Complete Tests Suite
+# --------------------
+
+tests: tests-execution tests-model-check
 
 # Cleaning
 # --------
