@@ -1,0 +1,27 @@
+// Search for Print A followed by B should return top
+
+machine A {
+  init state Start {
+    entry {
+      sleep(2);
+      print("A");
+    }
+  }
+}
+machine B {
+  init state Start {
+    entry {
+      sleep(4);
+      print("B");
+    }
+  }
+}
+
+init machine Driver {
+  init state Start {
+    entry {
+      new A();
+      new B();
+    }
+  }
+}

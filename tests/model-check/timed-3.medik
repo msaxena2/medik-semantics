@@ -1,0 +1,33 @@
+machine A {
+  init state Start {
+    entry(src) {
+      sleep(2);
+      send src, eADone;
+    }
+  }
+}
+machine B {
+  init state Start {
+    entry(src) {
+      sleep(2);
+      send src, eBDone;
+    }
+  }
+}
+init machine Driver {
+  init state Start {
+    entry {
+      new A(this);
+      new B(this);
+    }
+    on eADone do {
+      goto WaitB();
+    }
+  }
+  state WaitB {
+    on eBDone do {
+      goto Final;
+    }
+  }
+  state Final { }
+}

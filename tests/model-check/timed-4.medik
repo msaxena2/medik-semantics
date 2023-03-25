@@ -1,0 +1,37 @@
+// Check if output "A" followed by "B" is also possible
+
+machine A {
+  init state Start {
+    entry(src) {
+      sleep(2);
+      print("A");
+      send src, eADone;
+    }
+  }
+}
+machine B {
+  init state Start {
+    entry(src) {
+      sleep(2);
+      print("B");
+      send src, eBDone;
+    }
+  }
+}
+init machine Driver {
+  init state Start {
+    entry {
+      new A(this);
+      new B(this);
+    }
+    on eADone do {
+      goto WaitB();
+    }
+  }
+  state WaitB {
+    on eBDone do {
+      goto Final;
+    }
+  }
+  state Final { }
+}
