@@ -1057,10 +1057,8 @@ source at runtime.
     => { "name": Id2String(Name)
        , "args": [ Exps2JSONs(Args) ] }
 
-  rule Exp2JSON(S:String) => S
-  rule Exp2JSON(I:Int)    => I
-  rule Exp2JSON(B:Bool)   => B
-  rule Exp2JSON(undef)    => "undef"
+
+  rule Exp2JSON(V:Val) => Val2JSON(V)
 
   rule [[ Exp2JSON(instance(Id)) => { Obj2JSONs(GEnv) } ]]
        <instance>

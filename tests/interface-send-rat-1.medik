@@ -1,0 +1,13 @@
+interface ExternalMachine {
+}
+
+init machine Test receives ExternalPing {
+  init state Start {
+    entry {
+      var externalMachine = createFromInterface(ExternalMachine, "ex1");
+      send externalMachine, EStart, (0.1);
+      exit;
+    }
+  }
+}
+

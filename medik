@@ -71,21 +71,22 @@ async def read_stdout(k_process, handler_cb=lambda msg: print(json.dumps(msg))):
         out_json = await parse_json_stream(k_process.stdout)
         if out_json == None:
             break;
-        processed_json = process_rats(out_json)
         try:
-            match processed_json.get('action'):
+            match out_json.get('action'):
                 case 'print':
+                    processed_json = process_rats(out_json)
                     print(*map(lambda x: float(x) if isinstance(x, Fraction) else x
                               , processed_json['args'])
                           , end='', flush=True)
                 case 'sleep':
                     sleep_task = asyncio.create_task(_sleep( k_process
-                                                    , processed_json['duration']
-                                                    , processed_json['tid']))
+                                                    , out_json['duration']
+                                                    , out_json['tid']))
                 case 'exit':
                     break
                 case _:
-                    handler_cb(processed_json)
+                    # Print whatever we got
+                    handler_cb(out_json)
         except (ValueError, AttributeError) as e:
             sys.err.write(str(e))
             return None
