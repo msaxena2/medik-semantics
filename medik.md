@@ -898,7 +898,8 @@ these instance.
   rule Val2JSON(I:Int)      => I
   rule Val2JSON(S:String)   => S
   rule Val2JSON(undef)      => "undef"
-  rule Val2JSON(B:Bool)     => Bool2String(B)
+  rule Val2JSON(true)       => "true"
+  rule Val2JSON(false)      => "false"
 ```
 
 ##### Print
