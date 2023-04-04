@@ -32,27 +32,27 @@ module MEDIK-SYNTAX
                | FloatLiteral
                | "this"
                | UndefExp
-               | "obtainFrom" "(" Exp "," Exp ")"            [strict]
+               | "obtainFrom" "(" Exp "," Exp ")"            [seqstrict]
                | "(" Exp ")"                                 [bracket]
                > Exp "." Exp                                 [strict(1), left]
-               > Exp "+" Exp                                 [strict, left]
-               | Exp "-" Exp                                 [strict, left]
-               | Exp "*" Exp                                 [strict, left]
-               | Exp "/" Exp                                 [strict, left]
-               | Exp ">" Exp                                 [strict, left]
-               | Exp "<" Exp                                 [strict, left]
-               | Exp ">=" Exp                                [strict, left]
-               | Exp "<=" Exp                                [strict, left]
-               | "!" Exp                                     [strict, left]
+               > Exp "+" Exp                                 [seqstrict, left]
+               | Exp "-" Exp                                 [seqstrict, left]
+               | Exp "*" Exp                                 [seqstrict, left]
+               | Exp "/" Exp                                 [seqstrict, left]
+               | Exp ">" Exp                                 [seqstrict, left]
+               | Exp "<" Exp                                 [seqstrict, left]
+               | Exp ">=" Exp                                [seqstrict, left]
+               | Exp "<=" Exp                                [seqstrict, left]
+               | "!" Exp                                     [seqstrict, left]
                | Exp "&&" Exp                                [strict(1), left]
-               | Exp "||" Exp                                [strict, left]
-               > Exp "==" Exp                                [strict, left]
+               | Exp "||" Exp                                [seqstrict, left]
+               > Exp "==" Exp                                [seqstrict, left]
                | "interval" "(" Exp "," Exp ")"
                > Exp "in" Exp
                | "parseInt" "(" Exp ")"                      [strict]
                | StandaloneExp
 
-  syntax Exps ::= List{Exp, ","}  [strict, klabel(exps), avoid]
+  syntax Exps ::= List{Exp, ","}  [seqstrict, klabel(exps), avoid]
                 | Vals
 
   syntax Stmt ::= StandaloneExp ";"                               [strict]
