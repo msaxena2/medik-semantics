@@ -757,7 +757,7 @@ not handled in the machine's active state
   syntax Stmt ::= "asGlobalDecls"   "(" decls: Stmt ")"  [function]
 
   rule asGlobalDecls(S:Stmt Ss:Stmt)
-    => {asGlobalDecls(S) asGlobalDecls(Ss)}:>Stmt
+    => asGlobalDecls(S) asGlobalDecls(Ss)
   rule asGlobalDecls(var Id;) => var this . Id;
   rule asGlobalDecls(S:Stmt) => S               [owise]
 
