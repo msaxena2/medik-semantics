@@ -289,16 +289,16 @@ the configuration by traversing the program
   rule populateMachineCell(M, S Ss)
     => populateMachineCell(M, S) ~> populateMachineCell(M, Ss)
 
-  rule <k> populateMachineCell(MName, (var _ ;) #as GlobalDecl) => . ... </k>
+  rule <k> populateMachineCell(MName, (var GVar;)) => . ... </k>
        <machine>
         <machineName> MName </machineName>
-        <declarationCode> S => {S GlobalDecl}:>Stmt </declarationCode> ...
+        <declarationCode> S:Stmt => S var this.GVar; </declarationCode> ...
        </machine>
 
-  rule <k> populateMachineCell(MName, (_ = _;) #as GlobalDecl) => . ... </k>
+  rule <k> populateMachineCell(MName, (GVar = Exp;)) => . ... </k>
        <machine>
         <machineName> MName </machineName>
-        <declarationCode> S => {S GlobalDecl}:>Stmt </declarationCode> ...
+        <declarationCode> S:Stmt => S this.GVar = Exp; </declarationCode> ...
        </machine>
 
   rule <k> populateMachineCell(MName, fun FunName (Args) Block) => . ... </k>
@@ -318,10 +318,10 @@ the configuration by traversing the program
   rule populateInterfaceCell(IName, S Ss)
     => populateInterfaceCell(IName, S) ~> populateInterfaceCell(IName, Ss)
 
-  rule <k> populateInterfaceCell(IName, (var _;) #as Decl) => . ... </k>
+  rule <k> populateInterfaceCell(IName, var GVar;) => . ... </k>
        <interface>
         <interfaceName> IName </interfaceName>
-        <interfaceDeclarations> S => {S Decl}:>Stmt </interfaceDeclarations> ...
+        <interfaceDeclarations> S => S var this.GVar; </interfaceDeclarations> ...
        </interface>
 
   rule populateInterfaceCell(_, nothing;) => .
@@ -432,7 +432,7 @@ for handling external communications.
 
 ```k
   rule <k>   createMainInstance
-        =>   asGlobalDecls(MachineDecls)
+        =>   MachineDecls
           ~> enterState(InitState, .Vals) ...
        </k>
        <class> _ => InitMName </class>
@@ -625,7 +625,7 @@ is scheduled. The *caller* does not give up control.
        <k> new MName (Args) => wait ... </k>
        ( .Bag => <instance>
                   <id> Loc </id>
-                  <k> asGlobalDecls(MachineDecls)
+                  <k> MachineDecls
                    ~> unblockInstance(SourceId)
                    ~> enterState(InitState, Args)
                   </k>
@@ -753,13 +753,6 @@ not handled in the machine's active state
 ```
 
 ```k
-
-  syntax Stmt ::= "asGlobalDecls"   "(" decls: Stmt ")"  [function]
-
-  rule asGlobalDecls(S:Stmt Ss:Stmt)
-    => asGlobalDecls(S) asGlobalDecls(Ss)
-  rule asGlobalDecls(var Id;) => var this . Id;
-  rule asGlobalDecls(S:Stmt) => S               [owise]
 
   syntax KItem ::= "unblockCaller"
 
@@ -1126,7 +1119,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <k> createFromInterface( IName, FId ) => wait ... </k>
        ( .Bag =>  <instance>
                     <id> Loc </id>
-                    <k> asGlobalDecls(InterfaceDecls) ~> unblockCaller </k>
+                    <k> InterfaceDecls ~> unblockCaller </k>
                     <class> IName </class>
                     <callerId> SourceId </callerId>
                     <foreignId> FId </foreignId> ...
