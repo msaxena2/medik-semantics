@@ -12,7 +12,7 @@ module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
   imports RAT-SYNTAX
 
-  syntax Ids ::= List{Id, ","}    [klabel(ids)]
+  syntax Ids ::= List{Id, ","}    [klabel(exps)]
 
   syntax Val  ::= Int | Bool | String
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
@@ -122,7 +122,7 @@ Rewrite rules for `macro` constructs
 module MEDIK-SYNTAX-EXT
   imports MEDIK-SYNTAX
 
-  rule vars I1:Id, I2:Id, Is:Ids; => var I1; vars I2, Is;
+  rule vars I1:Id, Is:Ids; => var I1; vars Is;
   rule vars I, .Ids; => var I;
   rule var I:Id = E:Exp ; => var I; I = E;
   rule entry B:Block => entry (.Ids) B
