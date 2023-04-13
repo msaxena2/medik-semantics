@@ -50,7 +50,7 @@ COMMON_FILES  :=
 EXTRA_K_FILES += $(MAIN_DEFN_FILE).md
 ALL_K_FILES   := $(COMMON_FILES) $(EXTRA_K_FILES)
 
-build: build-llvm
+build: build-execution build-model-check build-symbolic
 
 COMMON_OPTS := -w all -Wno unused-symbol --gen-glr-bison-parser
 
@@ -103,12 +103,12 @@ $(LLVM_MCHECK_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 # Haskell-Build Pipeline
 # ----------------------
 
-HASKELL_BUILD_DIR    := $(BUILD_DIR)/haskell
+HASKELL_BUILD_DIR    := $(BUILD_DIR)/haskell-symbolic
 HASKELL_KOMPILED_DIR := $(HASKELL_BUILD_DIR)/$(MAIN_DEFN_FILE)-haskell-kompiled
 HASKELL_OPTS         :=
 HASKELL_KOMPILE_OPTS := $(COMMON_OPTS) $(HASKELL_OPTS)
 
-build-haskell: $(HASKELL_KOMPILED_DIR)/make.timestamp
+build-symbolic: $(HASKELL_KOMPILED_DIR)/make.timestamp
 
 $(HASKELL_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 	mkdir -p $(HASKELL_BUILD_DIR)
