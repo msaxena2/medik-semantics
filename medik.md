@@ -109,6 +109,8 @@ module MEDIK-SYNTAX
 
 ```{.mcheck .symbolic}
   syntax NonDetStmt ::= "either" Block "or" Block
+
+  syntax Val ::= "#nondet"
 ```
 
 ```k
@@ -1359,6 +1361,49 @@ processed, until at least one machine's sleep is completed.
 ```{.mcheck .symbolic}
   rule either B or _ => B
   rule either _ or B => B
+```
+
+#### Skolemized Variable
+
+```{.mcheck}
+  rule #nondet + _:Val     => #nondet
+  rule _:Val     + #nondet => #nondet
+
+  rule #nondet - _:Val     => #nondet
+  rule _:Val     - #nondet => #nondet
+
+  rule #nondet * _:Val     => #nondet
+  rule _:Val     * #nondet => #nondet
+
+  rule #nondet / _:Val     => #nondet
+  rule _:Val     / #nondet => #nondet
+
+  rule #nondet > _:Val     => #nondet
+  rule _:Val     > #nondet => #nondet
+
+  rule #nondet < _:Val     => #nondet
+  rule _:Val     < #nondet => #nondet
+
+  rule #nondet >= _:Val     => #nondet
+  rule _:Val     >= #nondet => #nondet
+
+  rule #nondet <= _:Val     => #nondet
+  rule _:Val     <= #nondet => #nondet
+
+  rule ! #nondet => #nondet
+
+  rule #nondet && _         => #nondet
+  rule true    && #nondet   => #nondet
+
+  rule #nondet || _         => #nondet
+  rule false   || #nondet   => #nondet
+
+
+  rule if (#nondet) Block => Block
+  rule if (#nondet) _     => .
+
+  rule if (#nondet) Block else _      => Block
+  rule if (#nondet) _     else Block  => Block
 ```
 
 #### Simple Functions For Conversions

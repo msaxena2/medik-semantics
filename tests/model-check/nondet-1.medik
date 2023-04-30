@@ -1,0 +1,13 @@
+init machine A {
+  var a;
+  init state Start {
+    entry {
+      a = #nondet;
+      if (a > 1) {
+        print("Foo");
+      } else {
+        print("Bar");
+      }
+    }
+  }
+}
