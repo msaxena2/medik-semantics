@@ -14,7 +14,10 @@ module MEDIK-SYNTAX
 
   syntax Ids ::= List{Id, ","}    [klabel(exps)]
 
-  syntax Val  ::= Int | Bool | String
+  syntax DetVal ::= Int | Bool | String
+  syntax NonDetVal
+
+  syntax Val  ::= DetVal | NonDetVal
   syntax Vals ::= List{Val, ","}  [klabel(exps)]
 
   syntax FloatLiteral ::= r"([\\+-]?[0-9]+(\\.[0-9]*)?|\\.[0-9]+)" [token, prec(1)]
@@ -110,7 +113,7 @@ module MEDIK-SYNTAX
 ```{.mcheck .symbolic}
   syntax NonDetStmt ::= "either" Block "or" Block
 
-  syntax Val ::= "#nondet"
+  syntax NonDetVal ::= "#nondet"
 ```
 
 ```k
@@ -158,7 +161,7 @@ module MEDIK
   imports RAT
   imports RAT-COMMON
 
-  syntax Val  ::= "null" | UndefExp | Rat | Bool | String
+  syntax DetVal  ::= "null" | UndefExp | Rat
 
   syntax KResult ::= Val
                    | Vals
@@ -591,17 +594,13 @@ is the number of mantissa digits.
   rule true  || _ => true
   rule false || B => B
 
-  rule I1 == I2 => I1 ==Rat I2
-  rule S1 == S2 => S1 ==String S2
-  rule B1 == B2 => B1 ==Bool B2
+  rule X:DetVal == X        => true
+  rule _:DetVal == _:DetVal => false [owise]
+```
 
-  rule undef == undef => true
-
-  rule X == undef => false
-    requires X =/=K undef
-
-  rule undef == X => false
-    requires X =/=K undef
+```mcheck
+  rule _:NonDetVal == _               => #nondet
+  rule _           == _:NonDetVal     => #nondet
 ```
 
 #### Instance creation via new
