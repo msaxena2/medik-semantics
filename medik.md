@@ -60,8 +60,8 @@ module MEDIK-SYNTAX
 
   syntax Stmt ::= StandaloneExp ";"                               [strict]
                 | "sleep" "(" Exp ")" ";"                         [strict(1)]
-                | "send" Exp "," Id ";"                           [macro]
-                | "send" Exp "," Id "," "(" Exps ")" ";"          [strict(1, 3)]
+                | "send" Exp "," ExtId ";"                        [macro]
+                | "send" Exp "," ExtId "," "(" Exps ")" ";"       [strict(1, 3)]
                 | "broadcast" Id ";"                              [macro]
                 | "broadcast" Id "," "(" Exps ")" ";"             [strict(2)]
                 | "goto" Id ";"                                   [macro]
@@ -79,8 +79,8 @@ module MEDIK-SYNTAX
                 | "while" "(" Exp ")" Block
                 | "entry" Block                                   [macro]
                 | "entry" "(" Ids ")" Block
-                | "on" Id "do" Block                              [macro]
-                | "on" Id "(" Ids ")" "do" Block
+                | "on" ExtId "do" Block                           [macro]
+                | "on" ExtId "(" Ids ")" "do" Block
                 | "fun" Id "(" Ids ")" Block
                 | NonDetStmt
                 | Exp "in" "{" CaseDecl "}"
@@ -104,8 +104,6 @@ module MEDIK-SYNTAX
   syntax Block ::= "{" "}"                                 [macro]
                  | "{" Stmt "}"
 
-  // Declarations for symbolic execution/model-checking
-  syntax NonDetStmt
 ```
 
 ### Non-deterministic choice
@@ -114,6 +112,29 @@ module MEDIK-SYNTAX
   syntax NonDetStmt ::= "either" Block "or" Block
 
   syntax NonDetVal ::= "#nondet"
+```
+
+### ObtainFrom requests/responses
+
+We allow certain special Ids in the semantics to track
+obtainFrom requests and responses. For concrete execution,
+these Ids are not available in programs.
+
+```k
+  // Declarations for symbolic execution/model-checking
+  syntax NonDetStmt
+
+  // Extended Ids for obtain requests/response
+  syntax ExtId ::= Id
+  syntax Exp ::= ExtId
+```
+
+For model checking  and symbolic execution however, since
+these requests are simulated by ghost machines, we allow using them
+in ghost machine syntax.
+
+```{.mcheck .symbolic}
+  syntax ExtId ::= Id | "$ObtainRequest" | "$ObtainResponse"
 ```
 
 ```k
@@ -131,7 +152,7 @@ module MEDIK-SYNTAX-EXT
   rule vars I, .Ids; => var I;
   rule var I:Id = E:Exp ; => var I; I = E;
   rule entry B:Block => entry (.Ids) B
-  rule on E:Id do B:Block => on E (.Ids) do B
+  rule on E:ExtId do B:Block => on E (.Ids) do B
   rule send Id , Event; => send Id, Event, ( .Vals );
   rule goto State:Id; => goto State ( .Vals );
   rule machine Name:Id Code
@@ -805,18 +826,12 @@ it is unblocked before the switch occurs.
 ```
 #### Event Handling
 
-Ids beginning with a `$` cannot be used in a medik program.
-prevents any clashes with user-defined events, we create a new
-`ExtendedExps` sort containing some constructors for Ids
-prefixed with `$`.
+Ids beginning with a `$` cannot be used in a medik program for concrete
+execution.
 
-```k
-
-  syntax ExtId ::= Id
-                 | "$ObtainResponse"
+```concrete
+  syntax ExtId ::= "$ObtainResponse"
                  | "$SleepDone"
-
-  syntax Exp ::= ExtId
 ```
 
 ##### Sending Events
@@ -855,7 +870,7 @@ prefixed with `$`.
   rule getRecieversAux(Event | ListItem(_) Rest) => getRecieversAux(Event | Rest) [owise]
 
   rule <instance>
-        <k> send instance(Id) , EventName:Id , ( Args ) ; =>  . ... </k>
+        <k> send instance(Id) , EventName:ExtId , ( Args ) ; =>  . ... </k>
         ...
        </instance>
        <instance>
@@ -865,7 +880,7 @@ prefixed with `$`.
        </instance>
        <machineName> CName </machineName>
 
-  rule <k> send instance(Id) , EventName:Id , ( Args ) ; =>  . ... </k>
+  rule <k> send instance(Id) , EventName:ExtId , ( Args ) ; =>  . ... </k>
        <id> Id </id>
        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
 ```
@@ -1009,6 +1024,36 @@ source at runtime.
 
 ```
 
+When model checking, a ghost machine is expected to receive and respond to the
+request. The event sent to the ghost has the following format:
+ - name: $ObtainRequest, args: (sourceId:Int, transactionId:Int, fieldToObtain:String)
+
+The expected response by the ghost must have the name `$ObtainReponse`, and
+contain the transaction id from the request, and the obtained value, as
+the first and second arguments respectively.
+
+```mcheck
+  syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
+
+  rule <id> SrcId </id>
+       <k> obtainFrom(instance(Id:Int), Field:String)
+        =>   releaseExecutor
+          ~> waitForObtainResponse(TId) ...
+       </k>
+       <instance>
+        <id> Id </id>
+        <inBuffer> ...
+            (.List => ListItem(eventArgsPair($ObtainRequest | instance(SrcId) , TId , Field)))
+        </inBuffer> ...
+       </instance>
+       <tidCount> TId => TId +Int 1 </tidCount>
+
+  rule <k> waitForObtainResponse(TId) => V ... </k>
+       <inBuffer>
+        (ListItem(eventArgsPair($ObtainResponse | TId:Int, V:Val )) => .List) ...
+       </inBuffer>
+       <executorAvailable> true => false </executorAvailable>
+```
 #### IPC via extern
 
 ```concrete
@@ -1135,7 +1180,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInstances> _ => true </foreignInstances>
 
 
-  rule <k> send instance(Id) , EventName:Id , ( Args ) ;
+  rule <k> send instance(Id) , EventName:ExtId , ( Args ) ;
         => jsonWrite( { "id"        : FId
                       , "tid"       : TId
                       , "interface" : Exp2JSON(IName)
