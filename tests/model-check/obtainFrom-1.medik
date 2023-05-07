@@ -1,0 +1,31 @@
+machine TestGhost {
+  var a;
+  init state Start {
+    entry(src) {
+      a = 1;
+      send src, GhostReady;
+    }
+    on ObtainRequest(src, tid, name) do {
+      if (name == "a") {
+        send src, ObtainResponse, (tid, a);
+      }
+    }
+  }
+}
+
+init machine Foo {
+  vars testGhost, obtained;
+  init state Start {
+    entry {
+      testGhost = new TestGhost(this);
+    }
+    on GhostReady do {
+      obtained = obtainFrom(testGhost, "a");
+      if (obtained == 1) {
+        print("ok");
+      } else {
+        print("not ok");
+      }
+    }
+  }
+}
