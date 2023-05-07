@@ -1009,6 +1009,37 @@ source at runtime.
 
 ```
 
+When model checking, a ghost machine is expected to receive and respond to the
+request. The event sent to the ghost has the following format:
+ - name: ObtainRequest, args: (sourceId:Int, transactionId:Int, fieldToObtain:String)
+
+The expected response by the ghost must have the name `ObtainReponse`, and
+contain the transaction id from the request, and the obtained value, as
+the first and second arguments respectively.
+
+```mcheck
+  syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
+
+  rule <id> SrcId </id>
+       <k> obtainFrom(instance(Id:Int), Field:String)
+        =>   releaseExecutor
+          ~> waitForObtainResponse(TId) ...
+       </k>
+       <instance>
+        <id> Id </id>
+        <inBuffer> ...
+            (.List => ListItem(eventArgsPair(ObtainRequest | SrcId , TId , Field)))
+        </inBuffer> ...
+       </instance>
+       <tidCount> TId => TId +Int 1 </tidCount>
+
+  rule <k> waitForObtainResponse(TId) => V ... </k>
+       <inBuffer>
+        (ListItem(eventArgsPair(ObtainResponse | TId:Int, V:Val )) => .List) ...
+       </inBuffer>
+       <executorAvailable> true => false </executorAvailable>
+```
+
 #### IPC via extern
 
 ```concrete
