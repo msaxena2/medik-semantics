@@ -631,26 +631,16 @@ global environment initialized. The new instance's `init` state
 is scheduled. The *caller* does not give up control.
 
 ```k
-  syntax KItem ::= "unblockInstance" "(" instanceId: Int ")"
-                 | "wait"
-
-  rule <instance>
-        <id> SourceId </id>
-        <k> wait => instance(TargetId) ... </k>  ...
-       </instance>
-       <instance>
-        <id> TargetId </id>
-        <k> unblockInstance(SourceId) => . ... </k> ...
-       </instance>
+  syntax KItem ::= "wait"
 
   rule <id> SourceId </id>
        <k> new MName (Args) => wait ... </k>
        ( .Bag => <instance>
                   <id> Loc </id>
                   <k> MachineDecls
-                   ~> unblockInstance(SourceId)
                    ~> enterState(InitState, Args)
                   </k>
+                  <callerId> SourceId </callerId>
                   <class> MName </class> ...
                  </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
@@ -683,8 +673,18 @@ An executor is responsible for *running* a block of code.
 ```k
   syntax KItem ::= "releaseExecutor"
 
+  rule <instance>
+        <id> CalleeId </id>
+        <k> releaseExecutor => . ... </k>
+        <callerId> CallerId => . </callerId> ...
+       </instance>
+       <instance>
+        <id> CallerId </id>
+        <k> wait => instance(CalleeId) ... </k> ...
+       </instance>
+
   rule <k> releaseExecutor => . ... </k>
-       <executorAvailable> _ => true </executorAvailable>
+       <executorAvailable> _ => true </executorAvailable> [owise]
 ```
 
 #### Entering States
@@ -713,7 +713,6 @@ An executor is responsible for *running* a block of code.
           <args> BlockVars </args> ...
          </state> ...
         </machine>
-       <executorAvailable> true => false </executorAvailable>
 ```
 
 #### Event Handling
@@ -776,23 +775,6 @@ not handled in the machine's active state
 
 ```k
 
-  syntax KItem ::= "unblockCaller"
-
-  rule <instance>
-        <id> SourceId </id>
-        <k> wait => instance(TargetId) ... </k> ...
-       </instance>
-       <instance>
-        <id> TargetId </id>
-        <k> unblockCaller => . ... </k>
-        <callerId> SourceId => . </callerId> ...
-       </instance>
-
-  rule <k> unblockCaller => . ... </k>
-       <callerId> . </callerId>
-
-  rule yield; => unblockCaller
-
   syntax KItem ::= "recordEnv"
                  | "restoreEnv"
 
@@ -814,13 +796,10 @@ not handled in the machine's active state
 
 ##### Semantics of goto
 
-Goto results in a context switch. If a caller is waiting on execution,
-it is unblocked before the switch occurs.
-
 ```k
 
   rule <k> goto Target:Id ( Args:Vals ) ; ~> _
-       => releaseExecutor ~> enterState(Target, Args) </k>
+       =>  enterState(Target, Args) </k>
        <env> _ => .Map </env>
        <stack> _ => .List </stack>
 ```
@@ -1146,7 +1125,7 @@ the first and second arguments respectively.
   rule <id> SourceId  </id>
        <k> constructObj( { Pairs:JSONs } ) => wait ... </k>
        ( .Bag =>  <instance>
-                    <k> JSONs2Obj(Pairs) ~> unblockCaller </k>
+                    <k> JSONs2Obj(Pairs) ~> releaseExecutor </k>
                     <id> Loc </id>
                     <callerId> SourceId </callerId> ...
                   </instance> )
@@ -1165,7 +1144,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <k> createFromInterface( IName, FId ) => wait ... </k>
        ( .Bag =>  <instance>
                     <id> Loc </id>
-                    <k> InterfaceDecls ~> unblockCaller </k>
+                    <k> InterfaceDecls ~> releaseExecutor </k>
                     <class> IName </class>
                     <callerId> SourceId </callerId>
                     <foreignId> FId </foreignId> ...
