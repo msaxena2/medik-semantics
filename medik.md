@@ -253,7 +253,7 @@ module MEDIK
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
-                <executorAvailable> true </executorAvailable>
+                <executorAvailable> false </executorAvailable>
                 <stuck> false </stuck>
 ```
 ```{.mcheck .symbolic}
@@ -684,7 +684,8 @@ An executor is responsible for *running* a block of code.
        </instance>
 
   rule <k> releaseExecutor => . ... </k>
-       <executorAvailable> _ => true </executorAvailable> [owise]
+       <callerId> . </callerId>
+       <executorAvailable> _ => true </executorAvailable>
 ```
 
 #### Entering States
