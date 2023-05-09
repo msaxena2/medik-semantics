@@ -61,7 +61,7 @@ module MEDIK-SYNTAX
   syntax Stmt ::= StandaloneExp ";"                               [strict]
                 | "sleep" "(" Exp ")" ";"                         [strict(1)]
                 | "send" Exp "," ExtId ";"                        [macro]
-                | "send" Exp "," ExtId "," "(" Exps ")" ";"       [strict(1, 3)]
+                | "send" Exp "," ExtId "," "(" Exps ")" ";"       [seqstrict(1, 3)]
                 | "broadcast" Id ";"                              [macro]
                 | "broadcast" Id "," "(" Exps ")" ";"             [strict(2)]
                 | "goto" Id ";"                                   [macro]
@@ -1356,14 +1356,14 @@ processed, until at least one machine's sleep is completed.
   rule <sleeping> Sleeping </sleeping>
        <slept> .List </slept>
        <executorAvailable> true => false </executorAvailable>
-        requires Sleeping =/=K .List                          [priority(200)]
+        requires Sleeping =/=K .List                          [priority(300)]
 
   rule <k> doSleep(N => N -Int 1) ... </k>
        <id> Id </id>
        <sleeping> ListItem(Id) => .List ... </sleeping>
        <slept> ... (.List => ListItem(Id)) </slept>
        <executorAvailable> false </executorAvailable>
-        requires N >Int 0                                     [priority(200)]
+        requires N >Int 0                                     [priority(300)]
 
   rule <k> doSleep(0) => waitForSleepResponse(-1) ... </k>
        <id> Id </id>
@@ -1379,7 +1379,7 @@ processed, until at least one machine's sleep is completed.
 
   rule <sleeping> .List </sleeping>
        <slept> .List </slept>
-       <executorAvailable> false => true </executorAvailable> [priority(200)]
+       <executorAvailable> false => true </executorAvailable> [priority(300)]
 
 ```
 
