@@ -48,7 +48,7 @@ module MEDIK-SYNTAX
                | Exp "<=" Exp                                [seqstrict, left]
                | "!" Exp                                     [seqstrict, left]
                | Exp "&&" Exp                                [strict(1), left]
-               | Exp "||" Exp                                [seqstrict, left]
+               | Exp "||" Exp                                [strict(1), left]
                > Exp "==" Exp                                [seqstrict, left]
                | "interval" "(" Exp "," Exp ")"
                > Exp "in" Exp
@@ -620,8 +620,8 @@ is the number of mantissa digits.
 ```
 
 ```mcheck
-  rule _:NonDetVal == _               => #nondet
-  rule _           == _:NonDetVal     => #nondet
+  rule _:NonDetVal == _:Val           => #nondet
+  rule _:Val       == _:NonDetVal     => #nondet
 ```
 
 #### Instance creation via new
@@ -1420,10 +1420,7 @@ processed, until at least one machine's sleep is completed.
   rule ! #nondet => #nondet
 
   rule #nondet && _         => #nondet
-  rule true    && #nondet   => #nondet
-
   rule #nondet || _         => #nondet
-  rule false   || #nondet   => #nondet
 
 
   rule if (#nondet) Block => Block
