@@ -1339,13 +1339,10 @@ a list of sleeping machines, and the control is ceeded.
 
   syntax KItem ::= "doSleep" "(" duration: Int ")"
 
-  rule sleep(N); => releaseExecutor ~> doSleep(N)
+  rule <id> Id </id>
+       <k> sleep(N); => releaseExecutor ~> doSleep(N) ... </k>
+       <sleeping> ... (.List => ListItem(Id)) </sleeping>
 
-  rule <k> doSleep(_) ... </k>
-       <id> Id </id>
-       <sleeping> Sleeping (.List => ListItem(Id)) </sleeping>
-       <slept> .List </slept>
-        requires notBool (Id in Sleeping)
 ```
 
 If no "instantaneous" rule can apply, the sleeps are
