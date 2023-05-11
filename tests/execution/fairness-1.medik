@@ -1,0 +1,27 @@
+machine A receives eOne {
+  init state Start {
+    on eOne do {
+      send this, eTwo;
+      goto Start;
+    }
+    on eTwo do {
+      print("B");
+    }
+  }
+}
+machine B receives eOne {
+  init state Start {
+    on eOne do {
+      print("A");
+    }
+  }
+}
+init machine Driver {
+  init state Start {
+    entry {
+      new A();
+      new B();
+      broadcast eOne;
+    }
+  }
+}
