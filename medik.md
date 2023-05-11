@@ -255,6 +255,8 @@ module MEDIK
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
                 <executorAvailable> false </executorAvailable>
                 <stuck> false </stuck>
+                <epoch> 0 </epoch>
+                <shouldAdvanceEpoch> false </shouldAdvanceEpoch>
 ```
 ```{.mcheck .symbolic}
                 <output> .List </output>
@@ -732,7 +734,7 @@ to run the event handler.
        </k>
        <class> MachineName </class>
        <activeState> Active </activeState>
-       <inBuffer> (ListItem(eventArgsPair(EventId | Args)) => .List) ... </inBuffer>
+       <inBuffer> (ListItem(event(EventId | Args | Epoch )) => .List) ... </inBuffer>
        <machine>
         <machineName> MachineName </machineName>
         <state>
@@ -744,7 +746,12 @@ to run the event handler.
          </eventHandler> ...
         </state> ...
       </machine>
+      <epoch> Epoch </epoch>
       <executorAvailable> true => false </executorAvailable>
+
+  rule <epoch> Epoch => Epoch +Int 1 </epoch>
+       <shouldAdvanceEpoch> true => false </shouldAdvanceEpoch>
+    [priority(250)]
 ```
 
 #### Stuck Execution
@@ -760,7 +767,7 @@ not handled in the machine's active state
   rule <k> handleEvents ~> _ => stuck </k>
        <activeState> ActiveState </activeState>
        <class> MachineName </class>
-       <inBuffer> ListItem(eventArgsPair(InputEvent | _)) ... </inBuffer>
+       <inBuffer> ListItem(event(InputEvent | _ | Epoch )) ... </inBuffer>
        <machine>
         <machineName> MachineName </machineName>
         <state>
@@ -770,6 +777,7 @@ not handled in the machine's active state
        </machine>
        <executorAvailable> true </executorAvailable>
        <stuck> _ => true </stuck>
+       <epoch> Epoch </epoch>
     requires notBool(InputEvent in HandledEvents)
 
 ```
@@ -816,7 +824,7 @@ execution.
 
 ##### Sending Events
 ```k
-  syntax KItem ::= "eventArgsPair"    "(" eventId: ExtId "|" args: Vals ")"
+  syntax KItem ::= "event"            "(" eventId: ExtId "|" args: Vals "|" epoch: Int ")"
                  | "performBroadcast" "(" eventId: Id    "|" args: Vals "|" List ")"
 
   syntax List ::= "getRecievers"    "(" eventId: Id ")"          [function]
@@ -856,13 +864,17 @@ execution.
        <instance>
         <id> Id </id>
         <class> CName </class>
-        <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer> ...
+        <inBuffer> ... (.List => ListItem( event(EventName | Args | Epoch +Int 1))) </inBuffer> ...
        </instance>
        <machineName> CName </machineName>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
   rule <k> send instance(Id) , EventName:ExtId , ( Args ) ; =>  . ... </k>
        <id> Id </id>
-       <inBuffer> ... (.List => ListItem( eventArgsPair(EventName | Args ))) </inBuffer>
+       <inBuffer> ... (.List => ListItem( event(EventName | Args | Epoch +Int 1))) </inBuffer>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 ```
 
 #### Broadcasts
@@ -997,10 +1009,11 @@ source at runtime.
        <tidCount> TId => TId +Int 1 </tidCount>
 
   rule <k> waitForObtainResponse(_) => V ... </k>
-       <inBuffer> (ListItem(eventArgsPair($ObtainResponse | V:Val )) => .List)
+       <inBuffer> (ListItem(event($ObtainResponse | V:Val  | Epoch )) => .List)
                    ...
        </inBuffer>
        <executorAvailable> true => false </executorAvailable>
+       <epoch> Epoch </epoch>
 
 ```
 
@@ -1023,16 +1036,19 @@ the first and second arguments respectively.
        <instance>
         <id> Id </id>
         <inBuffer> ...
-            (.List => ListItem(eventArgsPair($ObtainRequest | instance(SrcId) , TId , Field)))
+            (.List => ListItem(event($ObtainRequest | instance(SrcId) , TId , Field | Epoch +Int 1)))
         </inBuffer> ...
        </instance>
        <tidCount> TId => TId +Int 1 </tidCount>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
   rule <k> waitForObtainResponse(TId) => V ... </k>
        <inBuffer>
-        (ListItem(eventArgsPair($ObtainResponse | TId:Int, V:Val )) => .List) ...
+        (ListItem(event($ObtainResponse | TId:Int, V:Val | Epoch )) => .List) ...
        </inBuffer>
        <executorAvailable> true => false </executorAvailable>
+       <epoch> Epoch </epoch>
 ```
 #### IPC via extern
 
@@ -1273,9 +1289,11 @@ in the appropriate input queue.
        <instance>
           <k> waitForObtainResponse(TId) ... </k>
           <inBuffer>
-            (.List => ListItem(eventArgsPair($ObtainResponse | { JSON2Exp(Val) }:>Val))) ...
+            (.List => ListItem(event($ObtainResponse | { JSON2Exp(Val) }:>Val | Epoch +Int 1))) ...
           </inBuffer> ...
        </instance>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
   rule  <instance>
           <k> processExternInput(({ "action" : "sleepResponse"
@@ -1285,9 +1303,11 @@ in the appropriate input queue.
        <instance>
           <k> waitForSleepResponse(TId) ... </k>
           <inBuffer>
-            (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ...
+            (.List => ListItem(event($SleepDone | .Vals | Epoch +Int 1 ))) ...
           </inBuffer> ...
        </instance>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
 ```
 #### Sleeps
@@ -1314,9 +1334,10 @@ that responds when the sleep is done.
 
   rule <k> waitForSleepResponse(_) => . ... </k>
        <inBuffer>
-        (ListItem(eventArgsPair($SleepDone | _ )) => .List)  ...
+        (ListItem(event($SleepDone | _ | Epoch )) => .List)  ...
        </inBuffer>
        <executorAvailable> true => false </executorAvailable>
+       <epoch> Epoch </epoch>
 
   rule <instances>
        (<instance>
@@ -1364,9 +1385,11 @@ processed, until at least one machine's sleep is completed.
 
   rule <k> doSleep(0) => waitForSleepResponse(-1) ... </k>
        <id> Id </id>
-       <inBuffer> (.List => ListItem(eventArgsPair($SleepDone | .Vals))) ... </inBuffer>
+       <inBuffer> (.List => ListItem(event($SleepDone | .Vals | Epoch +Int 1))) ... </inBuffer>
        <sleeping> ListItem(Id) => .List ... </sleeping>
        <executorAvailable> false </executorAvailable>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
   rule <sleeping> .List => Slept </sleeping>
        <slept> Slept => .List </slept>
