@@ -67,7 +67,7 @@ module MEDIK-SYNTAX
                 | "goto" Id ";"                                   [macro]
                 | "goto" Id "(" Exps ")" ";"                      [strict(2)]
                 | "print" "(" Exp ")" ";"                         [strict]
-                > "return" ";"
+                > "return" ";"                                    [macro]
                 | "return" Exp ";"                                [strict(1)]
                 | "var" Id "=" Exp ";"                            [macro]
                 > Exp "=" Exp ";"                                 [strict(2)]
@@ -162,6 +162,7 @@ module MEDIK-SYNTAX-EXT
   rule broadcast Event; => broadcast Event, ( .Vals );
   rule interface Name:Id Code
     => interface Name receives .Ids Code
+  rule return ; => return undef;
 
   syntax Stmt ::= "nothing" ";"
 
@@ -959,7 +960,7 @@ external machine
   syntax KItem ::= "fstackItem" "(" Map "|" K ")"
 
   rule <k> FunName:Id ( Vals ) ~> Rest
-        => assign(Args | Vals) ~> FunCode ~> return;
+        => assign(Args | Vals) ~> FunCode ~> return undef;
        </k>
        <class> CName </class>
        <machine>
@@ -972,10 +973,6 @@ external machine
        </machine>
        <fstack> (.List => ListItem(fstackItem(Rho | Rest))) ... </fstack>
        <env> Rho </env>
-
-  rule <k> return ; ~> _ => Rest </k>
-       <env> _ => Rho </env>
-       <fstack> (ListItem(fstackItem(Rho | Rest)) => .List) ... </fstack>
 
   rule <k> return V:Val ; ~> _ => V ~> Rest </k>
        <env> _ => Rho </env>
@@ -1344,7 +1341,7 @@ that responds when the sleep is done.
           <k> exit ... </k>
           ...
         </instance> _ ) => .Bag
-       </instances>
+       </instances>                                                    [priority(170)]
 
 ```
 
