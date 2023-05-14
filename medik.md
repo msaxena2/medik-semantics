@@ -183,6 +183,7 @@ module MEDIK
   imports K-REFLECTION
   imports RAT
   imports RAT-COMMON
+  imports COLLECTIONS
 
   syntax DetVal  ::= "null" | UndefExp | Rat
 
@@ -249,7 +250,7 @@ module MEDIK
                     <interfaceReceiveEvents> .Set </interfaceReceiveEvents>
                   </interface>
                 </interfaces>
-                <activeInstances> ListItem(0) </activeInstances>
+                <activeInstances> SetItem(0) </activeInstances>
                 <store> .Map </store>
                 <nextLoc> 1 </nextLoc>
                 <foreignInstances> false </foreignInstances>
@@ -657,7 +658,7 @@ is scheduled. The *caller* does not give up control.
           <isInitState> true </isInitState> ...
         </state> ...
        </machine>
-       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
+       <activeInstances> ... (.Set => SetItem(Loc)) </activeInstances>
 
 ```
 
@@ -700,10 +701,8 @@ An executor is responsible for *running* a block of code.
 
   rule <k>   enterState(SName | Args )
         =>   StateDecls
-          ~> recordEnv
           ~> assign(BlockVars | Args)
           ~> EntryBlock
-          ~> restoreEnv
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -722,10 +721,8 @@ An executor is responsible for *running* a block of code.
 
   rule <k>   enterState(SName | Args | Scheduled )
         =>   StateDecls
-          ~> recordEnv
           ~> assign(BlockVars | Args)
           ~> EntryBlock
-          ~> restoreEnv
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -814,18 +811,78 @@ not handled in the machine's active state
 
 ```
 
+#### Memory Management
+
+We use a simple memory management scheme:
+ - Once a local variable goes out of scope, the corresponding
+   value is removed from the global store.
+ - Once a machine can no longer execute, it is garbage collected.
+
 ```k
 
   syntax KItem ::= "recordEnv"
                  | "restoreEnv"
+                 | "restoreEnv" "(" List ")"
 
   rule <k> recordEnv => . ... </k>
        <env> Rho </env>
        <stack> .List => ListItem(Rho) ... </stack>
 
-  rule <k> restoreEnv => . ... </k>
-       <env> _ => Rho </env>
-       <stack> (ListItem(Rho) => .List ) ... </stack>
+  rule <k> restoreEnv => restoreEnv(keys_list(Rho)) ... </k>
+       <env> Rho </env>
+
+  rule <k> restoreEnv((ListItem(Id) => .List) _) ... </k>
+       <env> ((Id |-> Ptr) => .Map) ... </env>
+       <stack> (ListItem((Id |-> Ptr2) _)) ... </stack>
+       <store> ((Ptr |-> _) => .Map) ... </store>
+    requires Ptr =/=K Ptr2
+
+  rule <k> restoreEnv((ListItem(Id) => .List) _) ... </k>
+       <env> ((Id |-> Ptr) => .Map) ... </env>
+       <stack> (ListItem((Id |-> Ptr) _)) ... </stack>
+
+  rule <k> restoreEnv((ListItem(Id) => .List) _) ... </k>
+       <env> ((Id |-> Ptr) => .Map) ... </env>
+       <stack> (ListItem(Rho)) ... </stack>
+       <store> ((Ptr |-> _) => .Map) ... </store>
+         requires notBool (Id in keys(Rho))
+
+  rule <k> restoreEnv(.List) => . ... </k>
+       <env> .Map => Rho </env>
+       <stack> (ListItem(Rho) => .List) ... </stack>
+
+  rule <k> restoreEnv(.List) => . ... </k>
+       <env> .Map </env>
+       <stack> .List </stack>
+
+  syntax KItem ::= "deleteInstance" "(" envList: List ")"
+
+  rule <instance>
+        <k> . => deleteInstance(keys_list(Rho)) </k>
+        <genv> Rho </genv>
+        <class> MachineName </class>
+        <activeState> _ </activeState> ...
+       </instance>
+       <machine>
+        <machineName> MachineName </machineName> ...
+       </machine>
+       <executorAvailable> true => false </executorAvailable>
+
+  rule <k> deleteInstance((ListItem(Id) => .List) _) </k>
+       <genv> ((Id |-> Ptr) => .Map) ... </genv>
+       <store> ((Ptr |-> _) => .Map) ... </store>
+
+  rule <instances>
+        ( <instance>
+            <id> Id </id>
+            <k> deleteInstance(.List) </k>
+            <genv> .Map </genv> ...
+          </instance>
+          => .Bag
+        ) ...
+       </instances>
+       <activeInstances> (SetItem(Id) => .Set) ... </activeInstances>
+       <executorAvailable> false => true </executorAvailable>
 
   syntax KItem ::= "assign" "(" args: Ids "|" values: Vals ")"
 
@@ -866,7 +923,7 @@ execution.
   syntax List ::= "getRecievers"    "(" eventId: Id ")"          [function]
   syntax List ::= "getRecieversAux" "(" eventId: Id "|" List ")" [function]
 
-  rule [[ getRecievers(Event) => getRecieversAux(Event | ActiveInstances) ]]
+  rule [[ getRecievers(Event) => getRecieversAux(Event | Set2List(ActiveInstances)) ]]
        <activeInstances> ActiveInstances </activeInstances>
 
   rule [[ getRecieversAux(Event | ListItem(Id) Rest) => ListItem(Id) getRecieversAux(Event | Rest) ]]
@@ -1200,7 +1257,7 @@ machines*, i.e. machines with transition systems *external* to the MediK program
                   </instance> )
        <nextLoc> Loc => Loc +Int 1 </nextLoc>
        <store> ( .Map => (Loc |-> instance(Loc))) ... </store>
-       <activeInstances> ... (.List => ListItem(Loc)) </activeInstances>
+       <activeInstances> ... (.Set => SetItem(Loc)) </activeInstances>
        <interface>
         <interfaceName> IName </interfaceName>
         <interfaceDeclarations> InterfaceDecls </interfaceDeclarations> ...
@@ -1375,7 +1432,8 @@ that responds when the sleep is done.
           <k> exit ... </k>
           ...
         </instance> _ ) => .Bag
-       </instances>                                                    [priority(170)]
+       </instances>
+       <store> _ => .Map </store> [priority(170)]
 
 ```
 
