@@ -26,6 +26,7 @@ module MEDIK-SYNTAX
                          | "createFromInterface" "(" Id "," String ")" [strict(2)]
                          | Id "(" Exps ")"                             [strict(2)]
                          | "exit"
+                         | "stop"
 
   syntax UndefExp ::= "undef"
 
@@ -254,7 +255,7 @@ module MEDIK
                 <foreignInstances> false </foreignInstances>
                 <tidCount> 1 </tidCount>
                 <externInstanceId> . </externInstanceId> // Hack until k is fixed
-                <executorAvailable> false </executorAvailable>
+                <executorAvailable> true </executorAvailable>
                 <stuck> false </stuck>
                 <epoch> 0 </epoch>
                 <shouldAdvanceEpoch> false </shouldAdvanceEpoch>
@@ -263,7 +264,6 @@ module MEDIK
                 <output> .List </output>
                 <sleeping> .List </sleeping>
                 <slept> .List </slept>
-                <elapsed> 0 </elapsed>
 ```
 
 ### Configuration Population
@@ -462,7 +462,7 @@ for handling external communications.
 ```k
   rule <k>   createMainInstance
         =>   MachineDecls
-          ~> enterState(InitState, .Vals) ...
+          ~> enterState(InitState | .Vals | Epoch ) ...
        </k>
        <class> _ => InitMName </class>
        <machine>
@@ -474,6 +474,7 @@ for handling external communications.
           <isInitState> true </isInitState> ...
         </state> ...
        </machine>
+       <epoch> Epoch </epoch>
 ```
 
 ### Expression and Statement
@@ -641,7 +642,7 @@ is scheduled. The *caller* does not give up control.
        ( .Bag => <instance>
                   <id> Loc </id>
                   <k> MachineDecls
-                   ~> enterState(InitState, Args)
+                   ~> enterState(InitState | Args )
                   </k>
                   <callerId> SourceId </callerId>
                   <class> MName </class> ...
@@ -694,9 +695,10 @@ An executor is responsible for *running* a block of code.
 #### Entering States
 
 ```k
-  syntax KItem ::= "enterState" "(" stateName: Id "," entryArgs: Vals ")"
+  syntax KItem ::= "enterState" "(" stateName: Id "|" entryArgs: Vals ")"
+                 | "enterState" "(" stateName: Id "|" entryArgs: Vals "|" epoch: Int ")"
 
-  rule <k>   enterState(SName, Args)
+  rule <k>   enterState(SName | Args )
         =>   StateDecls
           ~> recordEnv
           ~> assign(BlockVars | Args)
@@ -717,6 +719,31 @@ An executor is responsible for *running* a block of code.
           <args> BlockVars </args> ...
          </state> ...
         </machine>
+
+  rule <k>   enterState(SName | Args | Scheduled )
+        =>   StateDecls
+          ~> recordEnv
+          ~> assign(BlockVars | Args)
+          ~> EntryBlock
+          ~> restoreEnv
+          ~> releaseExecutor
+          ~> handleEvents ...
+       </k>
+       <activeState> _ => SName </activeState>
+       <env> _ => .Map </env>
+       <class> MName </class>
+       <machine>
+        <machineName> MName </machineName>
+         <state>
+          <stateName> SName </stateName>
+          <stateDeclarations> StateDecls </stateDeclarations>
+          <entryBlock> EntryBlock </entryBlock>
+          <args> BlockVars </args> ...
+         </state> ...
+        </machine>
+       <executorAvailable> true => false </executorAvailable>
+       <epoch> Current </epoch>
+        requires Scheduled <=Int Current
 ```
 
 #### Event Handling
@@ -735,7 +762,7 @@ to run the event handler.
        </k>
        <class> MachineName </class>
        <activeState> Active </activeState>
-       <inBuffer> (ListItem(event(EventId | Args | Epoch )) => .List) ... </inBuffer>
+       <inBuffer> (ListItem(event(EventId | Args | Scheduled )) => .List) ... </inBuffer>
        <machine>
         <machineName> MachineName </machineName>
         <state>
@@ -747,8 +774,9 @@ to run the event handler.
          </eventHandler> ...
         </state> ...
       </machine>
-      <epoch> Epoch </epoch>
+      <epoch> Current </epoch>
       <executorAvailable> true => false </executorAvailable>
+        requires Scheduled <=Int Current
 
   rule <epoch> Epoch => Epoch +Int 1 </epoch>
        <shouldAdvanceEpoch> true => false </shouldAdvanceEpoch>
@@ -768,7 +796,7 @@ not handled in the machine's active state
   rule <k> handleEvents ~> _ => stuck </k>
        <activeState> ActiveState </activeState>
        <class> MachineName </class>
-       <inBuffer> ListItem(event(InputEvent | _ | Epoch )) ... </inBuffer>
+       <inBuffer> ListItem(event(InputEvent | _ | _ )) ... </inBuffer>
        <machine>
         <machineName> MachineName </machineName>
         <state>
@@ -778,8 +806,11 @@ not handled in the machine's active state
        </machine>
        <executorAvailable> true </executorAvailable>
        <stuck> _ => true </stuck>
-       <epoch> Epoch </epoch>
-    requires notBool(InputEvent in HandledEvents)
+    requires notBool(InputEvent in HandledEvents)                       [priority(175)]
+
+  rule <k> . => stuck </k>
+       <inBuffer> ListItem(_) ... </inBuffer>
+       <stuck> _ => true </stuck>                                       [priority(175)]
 
 ```
 
@@ -809,9 +840,13 @@ not handled in the machine's active state
 ```k
 
   rule <k> goto Target:Id ( Args:Vals ) ; ~> _
-       =>  enterState(Target, Args) </k>
+       =>  releaseExecutor
+        ~> enterState(Target | Args | Epoch +Int 1 )
+       </k>
        <env> _ => .Map </env>
        <stack> _ => .List </stack>
+       <epoch> Epoch </epoch>
+       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 ```
 #### Event Handling
 
@@ -1286,11 +1321,10 @@ in the appropriate input queue.
        <instance>
           <k> waitForObtainResponse(TId) ... </k>
           <inBuffer>
-            (.List => ListItem(event($ObtainResponse | { JSON2Exp(Val) }:>Val | Epoch +Int 1))) ...
+            (.List => ListItem(event($ObtainResponse | { JSON2Exp(Val) }:>Val | Epoch ))) ...
           </inBuffer> ...
        </instance>
        <epoch> Epoch </epoch>
-       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
   rule  <instance>
           <k> processExternInput(({ "action" : "sleepResponse"
@@ -1300,11 +1334,10 @@ in the appropriate input queue.
        <instance>
           <k> waitForSleepResponse(TId) ... </k>
           <inBuffer>
-            (.List => ListItem(event($SleepDone | .Vals | Epoch +Int 1 ))) ...
+            (.List => ListItem(event($SleepDone | .Vals | Epoch ))) ...
           </inBuffer> ...
        </instance>
        <epoch> Epoch </epoch>
-       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 
 ```
 #### Sleeps
@@ -1331,10 +1364,11 @@ that responds when the sleep is done.
 
   rule <k> waitForSleepResponse(_) => . ... </k>
        <inBuffer>
-        (ListItem(event($SleepDone | _ | Epoch )) => .List)  ...
+        (ListItem(event($SleepDone | _ | Scheduled )) => .List)  ...
        </inBuffer>
        <executorAvailable> true => false </executorAvailable>
-       <epoch> Epoch </epoch>
+       <epoch> Current </epoch>
+         requires Scheduled <=Int Current
 
   rule <instances>
        (<instance>
@@ -1390,7 +1424,6 @@ processed, until at least one machine's sleep is completed.
 
   rule <sleeping> .List => Slept </sleeping>
        <slept> Slept => .List </slept>
-       <elapsed> E => E +Int 1 </elapsed>
        <executorAvailable> false => true </executorAvailable>
         requires Slept =/=K .List
 
