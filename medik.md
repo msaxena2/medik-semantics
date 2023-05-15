@@ -1115,29 +1115,8 @@ contain the transaction id from the request, and the obtained value, as
 the first and second arguments respectively.
 
 ```mcheck
-  syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
-
-  rule <id> SrcId </id>
-       <k> obtainFrom(instance(Id:Int), Field:String)
-        =>   releaseExecutor
-          ~> waitForObtainResponse(TId) ...
-       </k>
-       <instance>
-        <id> Id </id>
-        <inBuffer> ...
-            (.List => ListItem(event($ObtainRequest | instance(SrcId) , TId , Field | Epoch +Int 1)))
-        </inBuffer> ...
-       </instance>
-       <tidCount> TId => TId +Int 1 </tidCount>
-       <epoch> Epoch </epoch>
-       <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
-
-  rule <k> waitForObtainResponse(TId) => V ... </k>
-       <inBuffer>
-        (ListItem(event($ObtainResponse | TId:Int, V:Val | Epoch )) => .List) ...
-       </inBuffer>
-       <executorAvailable> true => false </executorAvailable>
-       <epoch> Epoch </epoch>
+ rule obtainFrom(Instance, Field)
+  =>  Instance . (String2Id(replaceAll(Field, " ", "_")))
 ```
 #### IPC via extern
 

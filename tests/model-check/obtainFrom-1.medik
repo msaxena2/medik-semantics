@@ -5,11 +5,6 @@ machine TestGhost {
       a = 1;
       send src, GhostReady;
     }
-    on $ObtainRequest(src, tid, name) do {
-      if (name == "a") {
-        send src, $ObtainResponse, (tid, a);
-      }
-    }
   }
 }
 
