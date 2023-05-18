@@ -825,38 +825,22 @@ We use a simple memory management scheme:
 
   syntax KItem ::= "recordEnv"
                  | "restoreEnv"
-                 | "restoreEnv" "(" List ")"
 
   rule <k> recordEnv => . ... </k>
        <env> Rho </env>
        <stack> .List => ListItem(Rho) ... </stack>
 
-  rule <k> restoreEnv => restoreEnv(keys_list(Rho)) ... </k>
+  rule <k> restoreEnv
+        => deleteLocalVars(Set2List(List2Set(values(Rho))
+                                    -Set
+                                    List2Set(values(StackRho)))) ...
+       </k>
        <env> Rho </env>
+       <stack> (ListItem(StackRho)) ... </stack>
 
-  rule <k> restoreEnv((ListItem(Id) => .List) _) ... </k>
-       <env> ((Id |-> Ptr) => .Map) ... </env>
-       <stack> (ListItem((Id |-> Ptr2) _)) ... </stack>
-       <store> ((Ptr |-> _) => .Map) ... </store>
-    requires Ptr =/=K Ptr2
-
-  rule <k> restoreEnv((ListItem(Id) => .List) _) ... </k>
-       <env> ((Id |-> Ptr) => .Map) ... </env>
-       <stack> (ListItem((Id |-> Ptr) _)) ... </stack>
-
-  rule <k> restoreEnv((ListItem(Id) => .List) _) ... </k>
-       <env> ((Id |-> Ptr) => .Map) ... </env>
-       <stack> (ListItem(Rho)) ... </stack>
-       <store> ((Ptr |-> _) => .Map) ... </store>
-         requires notBool (Id in keys(Rho))
-
-  rule <k> restoreEnv(.List) => . ... </k>
-       <env> .Map => Rho </env>
+  rule <k> deleteLocalVars(.List) => . ... </k>
+       <env> _ => Rho </env>
        <stack> (ListItem(Rho) => .List) ... </stack>
-
-  rule <k> restoreEnv(.List) => . ... </k>
-       <env> .Map </env>
-       <stack> .List </stack>
 
   syntax KItem ::= "deleteInstance" "(" envList: List ")"
 
@@ -907,6 +891,10 @@ We use a simple memory management scheme:
 
   rule <k> deleteLocalVars((ListItem(Ptr) => .List) _) ... </k>
        <store> ((Ptr |-> _) => .Map) ... </store>
+
+  rule <k> deleteLocalVars((ListItem(Ptr) => .List) _) ... </k>
+       <store> Store </store>
+    requires notBool(Ptr in keys(Store))
 
   rule deleteLocalVars(.List) => .
 ```
