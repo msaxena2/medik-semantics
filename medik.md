@@ -704,6 +704,7 @@ An executor is responsible for *running* a block of code.
         =>   StateDecls
           ~> assign(BlockVars | Args)
           ~> EntryBlock
+          ~> garbageCollect
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -724,6 +725,7 @@ An executor is responsible for *running* a block of code.
         =>   StateDecls
           ~> assign(BlockVars | Args)
           ~> EntryBlock
+          ~> garbageCollect
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -756,6 +758,7 @@ to run the event handler.
   rule <k>   handleEvents
         =>   assign(Vars | Args)
           ~> HandlerCode
+          ~> garbageCollect
           ~> releaseExecutor ...
        </k>
        <class> MachineName </class>
@@ -765,8 +768,7 @@ to run the event handler.
         <machineName> MachineName </machineName>
         <state>
          <stateName> Active </stateName>
-         <eventHandler>
-           <eventId> EventId </eventId>
+         <eventHandler> <eventId> EventId </eventId>
            <eventArgs> Vars </eventArgs>
            <handlerCode> HandlerCode </handlerCode> ...
          </eventHandler> ...
@@ -894,12 +896,28 @@ We use a simple memory management scheme:
   rule assign( .Ids | .Vals ) => .
 ```
 
+#### Garbage Collection
+
+```k
+  syntax KItem ::= "garbageCollect"
+                 | "deleteLocalVars" "(" varList: List ")"
+
+  rule <k> garbageCollect => deleteLocalVars(values(Rho)) ... </k>
+       <env> Rho => .Map </env>
+
+  rule <k> deleteLocalVars((ListItem(Ptr) => .List) _) ... </k>
+       <store> ((Ptr |-> _) => .Map) ... </store>
+
+  rule deleteLocalVars(.List) => .
+```
+
 ##### Semantics of goto
 
 ```k
 
   rule <k> goto Target:Id ( Args:Vals ) ; ~> _
-       =>  releaseExecutor
+       =>  garbageCollect
+        ~> releaseExecutor
         ~> enterState(Target | Args | Epoch +Int 1 )
        </k>
        <env> _ => .Map </env>
