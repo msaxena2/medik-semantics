@@ -704,7 +704,6 @@ An executor is responsible for *running* a block of code.
         =>   StateDecls
           ~> assign(BlockVars | Args)
           ~> EntryBlock
-          ~> garbageCollect
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -725,7 +724,6 @@ An executor is responsible for *running* a block of code.
         =>   StateDecls
           ~> assign(BlockVars | Args)
           ~> EntryBlock
-          ~> garbageCollect
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -758,7 +756,6 @@ to run the event handler.
   rule <k>   handleEvents
         =>   assign(Vars | Args)
           ~> HandlerCode
-          ~> garbageCollect
           ~> releaseExecutor ...
        </k>
        <class> MachineName </class>
@@ -883,11 +880,7 @@ We use a simple memory management scheme:
 #### Garbage Collection
 
 ```k
-  syntax KItem ::= "garbageCollect"
-                 | "deleteLocalVars" "(" varList: List ")"
-
-  rule <k> garbageCollect => deleteLocalVars(values(Rho)) ... </k>
-       <env> Rho => .Map </env>
+  syntax KItem ::= "deleteLocalVars" "(" varList: List ")"
 
   rule <k> deleteLocalVars((ListItem(Ptr) => .List) _) ... </k>
        <store> ((Ptr |-> _) => .Map) ... </store>
@@ -895,22 +888,24 @@ We use a simple memory management scheme:
   rule <k> deleteLocalVars((ListItem(Ptr) => .List) _) ... </k>
        <store> Store </store>
     requires notBool(Ptr in keys(Store))
-
-  rule deleteLocalVars(.List) => .
 ```
 
 ##### Semantics of goto
 
 ```k
+  syntax KItem ::= "clearEnv"
 
-  rule <k> goto Target:Id ( Args:Vals ) ; ~> _
-       =>  garbageCollect
-        ~> releaseExecutor
-        ~> enterState(Target | Args | Epoch +Int 1 )
-       </k>
+  rule <k> clearEnv => . ... </k>
        <env> _ => .Map </env>
        <stack> _ => .List </stack>
        <fstack> _ => .List </fstack>
+
+  rule <k> goto Target:Id ( Args:Vals ) ; ~> _
+       =>  restoreEnv
+        ~> clearEnv
+        ~> releaseExecutor
+        ~> enterState(Target | Args | Epoch +Int 1 )
+       </k>
        <epoch> Epoch </epoch>
        <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 ```
