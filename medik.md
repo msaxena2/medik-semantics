@@ -722,8 +722,10 @@ An executor is responsible for *running* a block of code.
 
   rule <k>   enterState(SName | Args | Scheduled )
         =>   StateDecls
+          ~> recordEnv
           ~> assign(BlockVars | Args)
           ~> EntryBlock
+          ~> restoreEnv
           ~> releaseExecutor
           ~> handleEvents ...
        </k>
@@ -754,8 +756,10 @@ to run the event handler.
   syntax KItem ::= "handleEvents"
 
   rule <k>   handleEvents
-        =>   assign(Vars | Args)
+        =>   recordEnv
+          ~> assign(Vars | Args)
           ~> HandlerCode
+          ~> restoreEnv
           ~> releaseExecutor ...
        </k>
        <class> MachineName </class>
