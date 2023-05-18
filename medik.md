@@ -265,6 +265,7 @@ module MEDIK
                 <output> .List </output>
                 <sleeping> .List </sleeping>
                 <slept> .List </slept>
+                <doSleep> false </doSleep>
 ```
 
 ### Configuration Population
@@ -861,7 +862,8 @@ We use a simple memory management scheme:
         <k> . => deleteInstance(keys_list(Rho)) </k>
         <genv> Rho </genv>
         <class> MachineName </class>
-        <activeState> _ </activeState> ...
+        <activeState> _ </activeState>
+        <inBuffer> .List </inBuffer> ...
        </instance>
        <machine>
         <machineName> MachineName </machineName> ...
@@ -902,6 +904,7 @@ We use a simple memory management scheme:
        </k>
        <env> _ => .Map </env>
        <stack> _ => .List </stack>
+       <fstack> _ => .List </fstack>
        <epoch> Epoch </epoch>
        <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
 ```
@@ -1442,6 +1445,7 @@ processed, until at least one machine's sleep is completed.
   rule <sleeping> Sleeping </sleeping>
        <slept> .List </slept>
        <executorAvailable> true => false </executorAvailable>
+       <doSleep> false => true </doSleep>
         requires Sleeping =/=K .List                          [priority(300)]
 
   rule <k> doSleep(N => N -Int 1) ... </k>
@@ -1449,7 +1453,8 @@ processed, until at least one machine's sleep is completed.
        <sleeping> ListItem(Id) => .List ... </sleeping>
        <slept> ... (.List => ListItem(Id)) </slept>
        <executorAvailable> false </executorAvailable>
-        requires N >Int 0                                     [priority(300)]
+       <doSleep> true </doSleep>
+        requires N >Int 0
 
   rule <k> doSleep(0) => waitForSleepResponse(-1) ... </k>
        <id> Id </id>
@@ -1462,12 +1467,7 @@ processed, until at least one machine's sleep is completed.
   rule <sleeping> .List => Slept </sleeping>
        <slept> Slept => .List </slept>
        <executorAvailable> false => true </executorAvailable>
-        requires Slept =/=K .List
-
-  rule <sleeping> .List </sleeping>
-       <slept> .List </slept>
-       <executorAvailable> false => true </executorAvailable> [priority(300)]
-
+       <doSleep> true => false </doSleep>
 ```
 
 #### Non-deterministic choice
