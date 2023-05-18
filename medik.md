@@ -897,21 +897,44 @@ We use a simple memory management scheme:
 ##### Semantics of goto
 
 ```k
-  syntax KItem ::= "clearEnv"
-
-  rule <k> clearEnv => . ... </k>
-       <env> _ => .Map </env>
-       <stack> _ => .List </stack>
-       <fstack> _ => .List </fstack>
+  syntax KItem ::= "clearEnv"   "(" ptrList: List ")"
 
   rule <k> goto Target:Id ( Args:Vals ) ; ~> _
-       =>  restoreEnv
-        ~> clearEnv
+       =>  clearEnv(values(Rho))
+        ~> clearStack(Stack)
+        ~> clearFStack(FStack)
         ~> releaseExecutor
         ~> enterState(Target | Args | Epoch +Int 1 )
        </k>
+       <env> Rho => .Map </env>
+       <stack> Stack => .List </stack>
+       <fstack> FStack => .List </fstack>
        <epoch> Epoch </epoch>
        <shouldAdvanceEpoch> _ => true </shouldAdvanceEpoch>
+
+  rule <k> clearEnv((ListItem(Ptr) => .List) _) ... </k>
+       <store> ((Ptr |-> _) => .Map) ... </store>
+
+  rule <k> clearEnv((ListItem(Ptr) => .List) _) ... </k>
+      <store> Store </store>
+   requires notBool (Ptr in keys(Store))
+
+  rule clearEnv(.List) => .
+
+  syntax KItem ::= "clearStack" "(" stack: List ")"
+
+  rule clearStack((ListItem(Rho)) Rest)
+    => clearEnv(values(Rho)) ~> clearStack(Rest)
+
+  rule clearStack(.List) => .
+
+  syntax KItem ::= "clearFStack" "(" fstack: List ")"
+
+  rule clearFStack(ListItem(fstackItem(Rho | _ )) Rest)
+    => clearStack(ListItem(Rho)) ~> clearFStack(Rest)
+
+  rule clearFStack(.List) => .
+
 ```
 #### Event Handling
 
