@@ -114,8 +114,8 @@ async def write_stdin(k_process, in_file=None):
 async def krun(pgm_file, in_file=None):
     set_env()
 
-    k_command = ( 'krun' , ['-d' , str(kompiled_dir.resolve())
-                           , '--output' , 'none'
+    k_command = ( 'krun' , ['--definition' , str(kompiled_dir.resolve())
+                           , '--output'     , 'none'
                            , pgm_file ])
 
     k_process = await asyncio.create_subprocess_exec( k_command[0]

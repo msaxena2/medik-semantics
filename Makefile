@@ -72,14 +72,14 @@ LLVM_KOMPILE_OPTS := $(COMMON_OPTS) $(LLVM_OPTS)
 LLVM_CC_OPTS      := -L$(LOCAL_LIB) -I$(K_RELEASE)/include/kllvm \
 		     -I$(PLUGIN_SUBMODULE)/plugin-c		 \
                      $(abspath $(CPP_FILES))                     \
-		     -std=c++14 -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
+		     -Wall -g -Wno-return-type-c-linkage #TODO: Fix disabled warning
 
 $(LLVM_EXEC_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES) $(CPP_FILES)
 	mkdir -p $(LLVM_EXEC_BUILD_DIR)
-	kompile -d $(LLVM_EXEC_KOMPILED_DIR)       \
-	--md-selector 'k|concrete'                 \
-	$(LLVM_KOMPILE_OPTS)                       \
-	$(addprefix -ccopt , $(LLVM_CC_OPTS))      \
+	kompile --output-definition $(LLVM_EXEC_KOMPILED_DIR) \
+	--md-selector 'k|concrete'                            \
+	$(LLVM_KOMPILE_OPTS)                                  \
+	$(addprefix -ccopt , $(LLVM_CC_OPTS))                 \
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
@@ -94,9 +94,9 @@ LLVM_MCHECK_OPTS := $(COMMON_OPTS) --enable-search \
 
 $(LLVM_MCHECK_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 	mkdir -p $(LLVM_MCHECK_BUILD_DIR)
-	kompile -d $(LLVM_MCHECK_KOMPILED_DIR)     \
-	--md-selector 'k|mcheck'                   \
-	$(LLVM_MCHECK_OPTS)                        \
+	kompile --output-definition $(LLVM_MCHECK_KOMPILED_DIR) \
+	--md-selector 'k|mcheck'                                \
+	$(LLVM_MCHECK_OPTS)                                     \
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
@@ -112,10 +112,10 @@ build-symbolic: $(HASKELL_KOMPILED_DIR)/make.timestamp
 
 $(HASKELL_KOMPILED_DIR)/make.timestamp: $(ALL_K_FILES)
 	mkdir -p $(HASKELL_BUILD_DIR)
-	kompile -d $(HASKELL_KOMPILED_DIR)         \
-	--backend haskell			   \
-	--md-selector 'k|symbolic'                 \
-	$(HASKELL_KOMPILE_OPTS)                    \
+	kompile --output-definition $(HASKELL_KOMPILED_DIR) \
+	--backend haskell			   	                          \
+	--md-selector 'k|symbolic'                          \
+	$(HASKELL_KOMPILE_OPTS)                             \
 	--main-module $(MAIN_MODULE) --syntax-module $(SYNTAX_MODULE) $(MAIN_DEFN_FILE).md
 	@touch $@
 
@@ -145,7 +145,7 @@ tests/execution/%.medik.run: tests/execution/%.medik tests/execution/%.medik.exp
 # --------------------
 
 TEST_MODEL_CHECK_FILES := $(wildcard tests/model-check/*.medik)
-KRUN_MCHECK 	       := krun  -d $(LLVM_MCHECK_KOMPILED_DIR) --search
+KRUN_MCHECK 	       := krun --definition $(LLVM_MCHECK_KOMPILED_DIR) --search
 
 tests-model-check: $(patsubst tests/model-check/%.medik, tests/model-check/%.medik.run, $(TEST_MODEL_CHECK_FILES))
 
