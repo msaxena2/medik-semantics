@@ -27,15 +27,18 @@ from enum import Enum
 #
 class KompileTarget(Enum):
     LLVM = 'llvm'
+    LLVM_MCHECK = 'llvm-mcheck'
     HASKELL = 'haskell'
 
     @property
     def md_selector(self) -> str:
         match self:
             case self.LLVM:
-                return 'k & ! symbolic'
-            case self.HASKELL | self.HASKELL_STANDALONE | self.HASKELL_BOOSTER | self.FOUNDRY:
-                return 'k & ! concrete'
+                return 'k|concrete'
+            case self.LLVM_MCHECK:
+                return 'k|mcheck'
+            case self.HASKELL:
+                return 'k|symbolic'
             case _:
                 raise AssertionError()
 
