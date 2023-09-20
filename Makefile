@@ -145,7 +145,7 @@ tests/execution/%.medik.run: tests/execution/%.medik tests/execution/%.medik.exp
 # --------------------
 
 TEST_MODEL_CHECK_FILES := $(wildcard tests/model-check/*.medik)
-KRUN_MCHECK 	       := krun --definition $(LLVM_MCHECK_KOMPILED_DIR) --search
+KRUN_MCHECK 	         := krun --definition $(LLVM_MCHECK_KOMPILED_DIR) --search
 
 tests-model-check: $(patsubst tests/model-check/%.medik, tests/model-check/%.medik.run, $(TEST_MODEL_CHECK_FILES))
 
