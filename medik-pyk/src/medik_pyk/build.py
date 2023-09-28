@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+from argparse import ArgumentParser
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -65,3 +66,17 @@ _TARGET_PARAMS: Final[Mapping[BuildTarget, Any]] = {
         'syntax_module': 'MEDIK-SYNTAX',
     },
 }
+
+def _build_arg_parser() -> ArgParser:
+    parser = ArgumentParser(prog='medik-build')
+    command_parser = parser.add_subparsers(dest='command', required=True)
+    build_parser = command_parser.add_parser('build', help='build targets')
+    build_parser.add_argument(
+        'targets', metavar='TARGET', nargs='*', type=target, default=targets, help='target to build'
+    )
+    return parser
+
+def main() -> None:
+    parser = _build_arg_parser()
+
+
