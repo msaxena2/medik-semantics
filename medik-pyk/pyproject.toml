@@ -35,9 +35,13 @@ pytest-mock = "*"
 pytest-xdist = "*"
 pyupgrade = "*"
 
+[tool.poetry.scripts]
+medik-build = "medik_pyk.build:main"
+
 [tool.isort]
 profile = "black"
 line_length = 120
+skip_glob = "src/medik_pyk/ext/**"
 
 [tool.autoflake]
 recursive = true
@@ -46,10 +50,12 @@ remove-all-unused-imports = true
 ignore-init-module-imports = true
 remove-duplicate-keys = true
 remove-unused-variables = true
+exclude = [ "src/medik_pyk/ext" ]
 
 [tool.black]
 line-length = 120
 skip-string-normalization = true
+exclude = "src/medik_pyk/ext"
 
 [tool.mypy]
 disallow_untyped_defs = true
