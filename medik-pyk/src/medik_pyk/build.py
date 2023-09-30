@@ -67,16 +67,17 @@ _TARGET_PARAMS: Final[Mapping[BuildTarget, Any]] = {
     },
 }
 
-def _build_arg_parser() -> ArgParser:
+
+def _build_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(prog='medik-build')
     command_parser = parser.add_subparsers(dest='command', required=True)
     build_parser = command_parser.add_parser('build', help='build targets')
-    build_parser.add_argument(
-        'targets', metavar='TARGET', nargs='*', type=target, default=targets, help='target to build'
-    )
+    build_parser.add_argument('target', help='[llvm|llvm-mcheck|haskell]', type=BuildTarget)
     return parser
+
 
 def main() -> None:
     parser = _build_arg_parser()
-
-
+    args = parser.parse_args()
+    match args.command:
+        case 'build': args.target.do_build()
