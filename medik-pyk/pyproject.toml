@@ -40,7 +40,7 @@ pytest-xdist = "*"
 pyupgrade = "*"
 
 [tool.poetry.scripts]
-medik-build = "medik_pyk.build:main"
+medik = "medik_pyk.medik:main"
 
 [tool.isort]
 profile = "black"
