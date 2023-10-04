@@ -1,9 +1,9 @@
-/.kompile*
-/.build
+/**/.kompile*
+/**/.build
 /tests/**/*.run
-**/make.timestamp
+/**/make.timestamp
 /extern*
-/.krun*
-/medik-kompiled
+/**/.krun*
+/**/medik-kompiled
 __pycache__
 /.python-version
