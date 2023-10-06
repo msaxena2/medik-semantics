@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 HOOK_NAMESPACES: Final = ('JSON', 'KRYPTO')
 
-
 class KompileTarget(Enum):
     LLVM = 'llvm'
     LLVM_MCHECK = 'llvm-mcheck'
@@ -33,65 +32,78 @@ class KompileTarget(Enum):
             case self.HASKELL:
                 return 'k|symbolic'
             case _:
-                raise AssertionError()
+                raise RuntimeError(f'Unrecognized Kompile Target {self.value}')
 
 
-def _llvm_opts() -> list[str]:
-    ccopts = ['-g', '-std=c++17']
+class MedikSemantics:
 
-    plugin_include = config.PLUGIN_DIR / 'plugin-c'
-    ccopts += [
-        f'{plugin_include}/json.cpp',
-    ]
+    def __init__(
+            self,
+            definition_dir: Path,
+            plugin_dir: Path
+        ) -> None:
 
-    return ccopts
+        print('initializing semantics')
+        self.definition_dir = definition_dir
+        self.plugin_dir = plugin_dir
 
+    def _llvm_opts(self) -> list[str]:
+        ccopts = ['-g', '-std=c++17']
 
-def medik_kompile(
-    target: KompileTarget,
-    output_dir: Path,
-    main_file: Path,
-    main_module: str,
-    syntax_module: str,
-    includes: Iterable[str] = (),
-    ccopts: Iterable[str] = (),
-    llvm_library: Path | None = None,
-) -> Path:
-    if llvm_library is None:
-        llvm_library = output_dir / 'llvm-library'
+        plugin_include = self.plugin_dir / 'plugin-c'
+        ccopts += [
+            f'{plugin_include}/json.cpp',
+        ]
 
-    include_dirs = [Path(include) for include in includes]
-    include_dirs += config.INCLUDE_DIRS
+        return ccopts
 
-    base_args = KompileArgs(
-        main_file=main_file,
-        main_module=main_module,
-        include_dirs=include_dirs,
-        md_selector=target.md_selector,
-        hook_namespaces=HOOK_NAMESPACES,
-    )
+    def build(
+            self,
+            output_dir: Path,
+            main_file: Path | None = None,
+            main_module: str = 'MEDIK',
+            syntax_module: str = 'MEDIK-SYNTAX',
+            target: KompileTarget = KompileTarget.LLVM,
+            includes: Iterable[str] = (),
+            ccopts: Iterable[str] = (),
+            llvm_library: Path | None = None,
+    ) -> Path:
 
-    kompile: Kompile
+        if main_file == None:
+            main_file = self.definition_dir / 'medik.md'
 
-    try:
-        match target:
-            case KompileTarget.LLVM:
-                ccopts = list(ccopts) + _llvm_opts()
-                kompile = LLVMKompile(base_args=base_args, ccopts=ccopts)
-                return kompile(output_dir=output_dir)
-            case KompileTarget.LLVM_MCHECK:
-                ccopts = list(ccopts) + _llvm_opts()
-                kompile = LLVMKompile(base_args=base_args, ccopts=ccopts, enable_search=True)
-                return kompile(output_dir=output_dir)
-            case KompileTarget.HASKELL:
-                kompile = HaskellKompile(base_args=base_args)
+        include_dirs = [Path(include) for include in includes]
+        include_dirs += (self.definition_dir, self.plugin_dir)
 
-                return kompile(output_dir=output_dir)
-            case _:
-                raise ValueError(f'Unsupported target: {target.value}')
-    except RuntimeError as err:
-        sys.stderr.write(f'\nkompile stdout:\n{err.args[1]}\n')
-        sys.stderr.write(f'\nkompile stderr:\n{err.args[2]}\n')
-        sys.stderr.write(f'\nkompile returncode:\n{err.args[3]}\n')
-        sys.stderr.flush()
-        raise
+        base_args = KompileArgs(
+            main_file=main_file,
+            main_module=main_module,
+            include_dirs=include_dirs,
+            md_selector=target.md_selector,
+            hook_namespaces=HOOK_NAMESPACES,
+        )
+
+        try:
+            match target:
+                output_dir = output_dir / f'{target.value}'
+                case KompileTarget.LLVM:
+                    ccopts = list(ccopts) + self._llvm_opts()
+                    kompile = LLVMKompile(base_args=base_args, ccopts=ccopts)
+                    return kompile(output_dir=output_dir)
+                case KompileTarget.LLVM_MCHECK:
+                    ccopts = list(ccopts) + self._llvm_opts()
+                    kompile = LLVMKompile(base_args=base_args, ccopts=ccopts, enable_search=True)
+                    return kompile(output_dir=output_dir)
+                case KompileTarget.HASKELL:
+                    kompile = HaskellKompile(base_args=base_args)
+
+                    return kompile(output_dir=output_dir)
+                case _:
+                    raise ValueError(f'Unsupported target: {target.value}')
+        except RuntimeError as err:
+            sys.stderr.write(f'\nkompile stdout:\n{err.args[1]}\n')
+            sys.stderr.write(f'\nkompile stderr:\n{err.args[2]}\n')
+            sys.stderr.write(f'\nkompile returncode:\n{err.args[3]}\n')
+            sys.stderr.flush()
+            raise
+
