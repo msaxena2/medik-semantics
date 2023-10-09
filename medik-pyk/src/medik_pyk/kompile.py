@@ -7,13 +7,10 @@ from typing import TYPE_CHECKING
 
 from pyk.ktool.kompile import HaskellKompile, KompileArgs, LLVMKompile
 
-from . import config
-
 if TYPE_CHECKING:
+    from pyk.ktool.kompile import Kompile
     from collections.abc import Iterable
     from typing import Final
-
-    from pyk.ktool.kompile import Kompile
 
 HOOK_NAMESPACES: Final = ('JSON', 'KRYPTO')
 
@@ -70,22 +67,23 @@ class MedikSemantics:
     ) -> Path:
 
         if main_file == None:
-            main_file = self.definition_dir / 'medik.md'
+            main_file_path = self.definition_dir / 'medik.md'
 
         include_dirs = [Path(include) for include in includes]
         include_dirs += (self.definition_dir, self.plugin_dir)
 
         base_args = KompileArgs(
-            main_file=main_file,
+            main_file=main_file_path,
             main_module=main_module,
             include_dirs=include_dirs,
             md_selector=target.md_selector,
             hook_namespaces=HOOK_NAMESPACES,
         )
 
+        kompile: Kompile
+
         try:
             match target:
-                output_dir = output_dir / f'{target.value}'
                 case KompileTarget.LLVM:
                     ccopts = list(ccopts) + self._llvm_opts()
                     kompile = LLVMKompile(base_args=base_args, ccopts=ccopts)

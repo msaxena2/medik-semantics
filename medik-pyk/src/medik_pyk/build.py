@@ -6,7 +6,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from . import config
-from .kompile import KompileTarget, medik_kompile
+from .kompile import KompileTarget, MedikSemantics
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
