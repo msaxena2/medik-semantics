@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from asyncio import Queue
 
 import pytest
 
@@ -25,6 +26,9 @@ def test_pyk_kompile(build_target):
 
     try:
         semantics = medik_semantics.build(config.BUILD_DIR, target=build_target)
+        send_queue = asyncio.Queue()
+        receive_queue = asyncio.Queue()
+        medik = Medik(semantics_dir=semantics)
 
     except RuntimeError as runtime_error:
         assert False, f'kompile {build_target.value} failed with {runtime_error}'

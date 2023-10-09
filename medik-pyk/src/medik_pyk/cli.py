@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from pyk.cli.utils import file_path
 from pyk.ktool.krun import KRunOutput
 
-from .build import BuildTarget
+from .kompile import BuildTarget
 from .krun import medik_run
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ def exec_run(
     output_mode: KRunOutput = KRunOutput.PRETTY,
     search_pattern: str | None = None,
     depth: int | None = None,
-    **kwargs: Any,
+    **kwargs: Any
 ) -> None:
     if do_search:
         target = BuildTarget.LLVM_MCHECK
