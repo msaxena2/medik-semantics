@@ -39,7 +39,12 @@ class BuildTarget(Enum):
         _LOGGER.info(f'Building target {self.name}: {self.path}')
         config.BUILD_DIR.mkdir(parents=True, exist_ok=True)
         try:
-            medik_kompile(output_dir=self.path, **_TARGET_PARAMS[self])
+            medik_semantics = MedikSemantics(
+                                definition_dir=config.MEDIK_DIR,
+                                plugin_dir=config.PLUGIN_DIR
+                              )
+            medik_semantics.build(output_dir = self.path,
+                                  **_TARGET_PARAMS[self])
         except RuntimeError:
             self.clean()
             raise

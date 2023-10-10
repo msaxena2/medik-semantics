@@ -7,51 +7,20 @@ from typing import TYPE_CHECKING
 from pyk.cli.utils import file_path
 from pyk.ktool.krun import KRunOutput
 
-from .kompile import BuildTarget
-from .krun import medik_run
+from .kompile import KompileTarget
 
 if TYPE_CHECKING:
-    from pathlib import Path
-    from typing import Any, Final
+    from typing import Final
 
 
 _LOGGER: Final = logging.getLogger(__name__)
 _LOG_FORMAT: Final = '%(levelname)s %(asctime)s %(name)s - %(message)s'
 
-# ----------------
-# Running Programs
-# ----------------
-
-
-def exec_run(
-    input_file: Path,
-    do_search: bool = False,
-    output_mode: KRunOutput = KRunOutput.PRETTY,
-    search_pattern: str | None = None,
-    depth: int | None = None,
-    **kwargs: Any
-) -> None:
-    if do_search:
-        target = BuildTarget.LLVM_MCHECK
-    else:
-        target = BuildTarget.LLVM
-
-    medik_run(
-        input_file=input_file,
-        target=target,
-        output_mode=output_mode,
-        do_search=do_search,
-        search_pattern=search_pattern,
-        depth=depth,
-        **kwargs,
-    )
-
-
 def _build_arg_parser() -> ArgumentParser:
     parser = ArgumentParser(prog='medik')
     command_parser = parser.add_subparsers(dest='command', required=True)
     build_parser = command_parser.add_parser('build', help='build targets')
-    build_parser.add_argument('target', help='[llvm|llvm-mcheck|haskell]', type=BuildTarget)
+    build_parser.add_argument('target', help='[llvm|llvm-mcheck|haskell]', type=KompileTarget)
 
     run_parser = command_parser.add_parser('run', help='run programs')
     run_parser.add_argument('input_file', help='Input MediK File', type=file_path)
@@ -75,5 +44,3 @@ def main() -> None:
     match args.command:
         case 'build':
             args.target.do_build()
-        case 'run':
-            exec_run(args.input_file, do_search=args.do_search, output_mode=args.output_mode)

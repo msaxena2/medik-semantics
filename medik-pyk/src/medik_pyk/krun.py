@@ -30,7 +30,7 @@ class Medik(KRun):
         keep_alive: bool = False,
         depth: int | None = None,
         do_search: bool = False
-    ):
+    ) -> None:
 
         try:
             process_res = _krun(

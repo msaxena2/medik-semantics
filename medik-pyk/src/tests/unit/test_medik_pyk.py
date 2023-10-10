@@ -9,7 +9,7 @@ from medik_pyk.kompile import MedikSemantics, KompileTarget
 from medik_pyk.krun import Medik
 
 
-def get_configured_semantics():
+def get_configured_semantics() -> MedikSemantics:
     medik_semantics = MedikSemantics(
                 definition_dir = config.MEDIK_DIR,
                 plugin_dir = config.PLUGIN_DIR
@@ -23,11 +23,11 @@ def get_configured_semantics():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('build_target', [KompileTarget.LLVM])
-async def test_pyk_kompile(build_target: KompileTarget):
+async def test_pyk_kompile(build_target: KompileTarget) -> None:
     medik_semantics = get_configured_semantics()
     definition_dir = medik_semantics.build(config.BUILD_DIR / build_target.value, target=build_target)
-    send_queue = Queue()
-    receive_queue = Queue()
+    send_queue: Queue = Queue()
+    receive_queue: Queue = Queue()
     medik = Medik(definition_dir=definition_dir)
     await medik.run(program_file=config.MEDIK_DIR / 'simple-pgm.medik' ,
                     send_queue=send_queue,
