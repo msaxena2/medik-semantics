@@ -3,13 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pyk.ktool.krun import KRun, KRunOutput, _krun
+from pyk.ktool.kprint import KPrint
+from pyk.kore.parser import KoreParser
 
 
 if TYPE_CHECKING:
     from asyncio import Queue
     from pathlib import Path
 
-class Medik(KRun):
+class Medik(KRun, KPrint):
     def __init__(
             self,
             definition_dir: Path,
@@ -21,6 +23,10 @@ class Medik(KRun):
             self,
             definition_dir = definition_dir,
             command = krun_command,
+        )
+        KPrint.__init__(
+            self,
+            definition_dir = definition_dir,
         )
 
     async def run(self,
@@ -39,8 +45,19 @@ class Medik(KRun):
                 output=KRunOutput.KORE,
                 depth=0
             )
-            print(process_res)
+
         except RuntimeError as err:
             raise RuntimeError('Failed to load program') from err
 
+        current_pattern:Pattern = KoreParser(process_res.stdout).pattern()
 
+        while True:
+            next_pattern:Pattern = self.run_pattern(
+                                            pattern=current_pattern,
+                                            depth=1
+                                   )
+            if (next_pattern == current_pattern):
+                break
+            current_pattern = next_pattern
+
+        print(self.kore_to_pretty(current_pattern))
