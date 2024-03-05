@@ -99,9 +99,8 @@ class MedikSemantics:
                 case _:
                     raise ValueError(f'Unsupported target: {target.value}')
         except RuntimeError as err:
-            sys.stderr.write(f'\nkompile stdout:\n{err.args[1]}\n')
-            sys.stderr.write(f'\nkompile stderr:\n{err.args[2]}\n')
-            sys.stderr.write(f'\nkompile returncode:\n{err.args[3]}\n')
-            sys.stderr.flush()
+            if len(err.args) > 1:
+                sys.stderr.write(f'\nkompile error:\n{err.args[0]}\n')
+                sys.stderr.flush()
             raise
 

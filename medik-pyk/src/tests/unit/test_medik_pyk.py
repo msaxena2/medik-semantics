@@ -24,8 +24,8 @@ def get_configured_semantics() -> MedikSemantics:
 @pytest.mark.asyncio
 @pytest.mark.parametrize('build_target', [KompileTarget.LLVM])
 async def test_pyk_kompile(build_target: KompileTarget) -> None:
-    # medik_semantics = get_configured_semantics()
-    # definition_dir = medik_semantics.build(config.BUILD_DIR / build_target.value, target=build_target)
+    medik_semantics = get_configured_semantics()
+    definition_dir = medik_semantics.build(config.BUILD_DIR / build_target.value, target=build_target)
     send_queue: Queue = Queue()
     receive_queue: Queue = Queue()
     medik = Medik(definition_dir=config.BUILD_DIR / build_target.value)
