@@ -12,13 +12,13 @@ module MEDIK-SYNTAX
   imports DOMAINS-SYNTAX
   imports RAT-SYNTAX
 
-  syntax Ids ::= List{Id, ","}    [klabel(exps)]
+  syntax Ids ::= List{Id, ","}    [overload(exps)]
 
   syntax DetVal ::= Int | Bool | String
   syntax NonDetVal
 
   syntax Val  ::= DetVal | NonDetVal
-  syntax Vals ::= List{Val, ","}  [klabel(exps)]
+  syntax Vals ::= List{Val, ","}  [overload(exps)]
 
   syntax FloatLiteral ::= r"([\\+-]?[0-9]+(\\.[0-9]*)?|\\.[0-9]+)" [token, prec(1)]
 
@@ -56,7 +56,7 @@ module MEDIK-SYNTAX
                | "parseInt" "(" Exp ")"                      [strict]
                | StandaloneExp
 
-  syntax Exps ::= List{Exp, ","}  [seqstrict, klabel(exps), avoid]
+  syntax Exps ::= List{Exp, ","}  [seqstrict, overload(exps), avoid]
                 | Vals
 
   syntax Stmt ::= StandaloneExp ";"                               [strict]
