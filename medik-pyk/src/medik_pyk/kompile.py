@@ -46,12 +46,6 @@ class MedikSemantics:
 
     def _llvm_opts(self) -> list[str]:
         ccopts = ['-g', '-std=c++17']
-
-        plugin_include = self.plugin_dir / 'plugin-c'
-        ccopts += [
-            f'{plugin_include}/json.cpp',
-        ]
-
         return ccopts
 
     def build(

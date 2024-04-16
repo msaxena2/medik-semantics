@@ -2,7 +2,3 @@
 	path = medik-pyk/src/medik_pyk/ext/k
     url = https://github.com/kframework/k.git
     ignore = untracked
-[submodule "ext/blockchain-k-plugin"]
-	path = medik-pyk/src/medik_pyk/ext/blockchain-k-plugin
-    url = https://github.com/msaxena2/blockchain-k-plugin.git
-    ignore = untracked

@@ -260,8 +260,7 @@ module MEDIK
                 <stuck> false </stuck>
                 <epoch> 0 </epoch>
                 <shouldAdvanceEpoch> false </shouldAdvanceEpoch>
-```
-```{.mcheck .symbolic}
+                <input> .List </input>
                 <output> .List </output>
                 <sleeping> .List </sleeping>
                 <slept> .List </slept>
@@ -443,7 +442,7 @@ for handling external communications.
 
 ```
 
-```concrete
+```concretex
   rule createInitInstances => createExternHandlerInstance ~> createMainInstance
 
   rule <k> createExternHandlerInstance => . ... </k>
@@ -459,7 +458,6 @@ for handling external communications.
 ```{.symbolic .mcheck}
   rule createInitInstances => createMainInstance
 ```
-
 
 ```k
   rule <k>   createMainInstance
@@ -1037,11 +1035,10 @@ We treat printing as sending an event to an implicit "tty"
 external machine
 
 ```concrete
-  rule <k> print(V:Val) ;
-        => jsonWrite( { "action" : "print"
-                      , "args"   : [Val2JSON(V)] }
-                    , #stdout)  ...
-       </k>
+  rule <k> print(V:Val) ; => . ... </k>
+       <output> ...
+        .List => ListItem({ "action": "print" , "args": [Val2JSON(V)] })
+       </output>
        <tidCount> TId => TId +Int 1 </tidCount>
 
 ```
@@ -1112,12 +1109,7 @@ source at runtime.
   syntax KItem ::= "waitForObtainResponse" "(" Exp ")"
 
   rule <k> obtainFrom(instance(Id:Int), Field:String)
-        =>   jsonWrite( { "id"        : FId
-                        , "tid"       : TId
-                        , "interface" : Exp2JSON(IName)
-                        , "name"      : "Obtain"
-                        , "args"      : [ Field , .JSONs ] }, #stdout)
-          ~> releaseExecutor
+          => releaseExecutor
           ~> waitForObtainResponse(TId) ...
        </k>
        <instance>
@@ -1125,6 +1117,13 @@ source at runtime.
         <class> IName </class>
         <foreignId> FId </foreignId> ...
        </instance>
+       <output> ...
+        .List => ListItem( { "id"        : FId
+                           , "tid"       : TId
+                           , "interface" : Exp2JSON(IName)
+                           , "name"      : "Obtain"
+                           , "args"      : [ Field , .JSONs ] } )
+       </output>
        <interfaceName> IName </interfaceName>
        <tidCount> TId => TId +Int 1 </tidCount>
 
@@ -1151,7 +1150,7 @@ the first and second arguments respectively.
 ```
 #### IPC via extern
 
-```concrete
+```concretex
   syntax JSON ::= "json-undef" [klabel(JSON-RPCundef), symbol]
   syntax IOJSON ::= IOError | JSON
 
@@ -1161,7 +1160,7 @@ the first and second arguments respectively.
   syntax K ::= "jsonWrite" "(" JSON "," Int ")"       [function, hook(JSON.write)]
 ```
 
-```symbolic
+```symbolicx
   syntax IOJSON ::= IOError
                   | JSON
                   | "jsonRead" "(" Int ")"            [function]
@@ -1275,18 +1274,19 @@ machines*, i.e. machines with transition systems *external* to the MediK program
        <foreignInstances> _ => true </foreignInstances>
 
 
-  rule <k> send instance(Id) , EventName:ExtId , ( Args ) ;
-        => jsonWrite( { "id"        : FId
-                      , "tid"       : TId
-                      , "interface" : Exp2JSON(IName)
-                      , "name"      : Exp2JSON(EventName)
-                      , "args"      : [Exps2JSONs(Args)] }, #stdout) ...
-       </k>
+  rule <k> send instance(Id) , EventName:ExtId , ( Args ) ; => . ... </k>
        <instance>
         <id> Id </id>
         <class> IName </class>
         <foreignId> FId </foreignId> ...
        </instance>
+       <output> ...
+        .List => ListItem({ "id"        : FId
+                          , "tid"       : TId
+                          , "interface" : Exp2JSON(IName)
+                          , "name"      : Exp2JSON(EventName)
+                          , "args"      : [Exps2JSONs(Args)] })
+       </output>
        <interfaceName> IName </interfaceName>
        <tidCount> TId => TId +Int 1 </tidCount>
 
@@ -1319,7 +1319,7 @@ The *ExternHandler* instance is scheduled as any other machine.
 It reads the read end of the input buffer, and places the message
 in the appropriate input queue.
 
-```concrete
+```concretex
 
   syntax KItem ::= "readExternInput"
                  | "processExternInput" "(" IOJSON ")"
@@ -1415,13 +1415,13 @@ that responds when the sleep is done.
 ```concrete
 
   rule <k> sleep(Duration:Int) ;
-        =>    jsonWrite( { "action"   : "sleep"
-                         , "duration" : Duration
-                         , "tid"      : TId }
-                       , #stdout )
-           ~> releaseExecutor
-           ~> waitForSleepResponse(TId) ...
+        => releaseExecutor ~> waitForSleepResponse(TId) ...
        </k>
+       <output> ...
+        .List => ListItem( { "action"   : "sleep"
+                           , "duration" : Duration
+                           , "tid"      : TId })
+       </output>
        <foreignInstances> _ => true </foreignInstances>
        <tidCount> TId => TId +Int 1 </tidCount>
 ```
