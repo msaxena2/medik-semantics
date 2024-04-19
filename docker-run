@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker run --name=medik-container -it -v `pwd`:"/home/$(whoami)/medik-semantics" -w "/home/$(whoami)/medik-semantics" medik-image:latest

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+docker build . --tag medik-image \
+               --build-arg K_COMMIT=$(cat deps/k_release)
