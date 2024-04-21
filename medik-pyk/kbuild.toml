@@ -1,0 +1,10 @@
+[project]
+name = "medik-semantics"
+version = "0.1.0"
+source = "./src/medik_pyk"
+
+[targets.llvm]
+backend = "llvm"
+main-file = "medik.md"
+main-module = "MEDIK"
+syntax-module = "MEDIK-SYNTAX"

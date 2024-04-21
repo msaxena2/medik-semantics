@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 
-docker build . --tag medik-image \
-               --build-arg K_COMMIT=$(cat deps/k_release)
+docker build --tag medik-image                          \
+             --build-arg K_COMMIT=$(cat deps/k_release) \
+             --build-arg UNAME=`whoami`                 \
+             --build-arg UID=`id -u`                    \
+             --build-arg GID=`id -g` .
