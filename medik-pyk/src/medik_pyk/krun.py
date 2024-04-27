@@ -15,14 +15,12 @@ class Medik(KRun, KPrint):
     def __init__(
             self,
             definition_dir: Path,
-            main_file: Path | None = None,
-            krun_command: str = 'krun'
+            main_file: Path | None = None
         ) -> None:
 
         KRun.__init__(
             self,
             definition_dir = definition_dir,
-            command = krun_command,
         )
         KPrint.__init__(
             self,
@@ -61,3 +59,5 @@ class Medik(KRun, KPrint):
             current_pattern = next_pattern
 
         print(self.kore_to_pretty(current_pattern))
+
+
