@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-import concurrent.futures
 import logging
-import sys
 from enum import Enum
-from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
-from pyk.kdist import kdist
 from pyk.ktool.kompile import KompileArgs, LLVMKompile
 
 _LOGGER: Final = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 class KompileTarget(Enum):
     EXECUTION = 'execution'
@@ -31,16 +32,16 @@ class KompileTarget(Enum):
 
 
 def medik_kompile(
-        target: KompileTarget,
-        output_dir: Path,
-        main_file: Path,
-        *,
-        main_module: str | None,
-        syntax_module: str | None,
-        enable_llvm_debug: bool = False,
-        debug: bool = False,
-        verbose: bool = False
-        ) -> Path:
+    target: KompileTarget,
+    output_dir: Path,
+    main_file: Path,
+    *,
+    main_module: str | None,
+    syntax_module: str | None,
+    enable_llvm_debug: bool = False,
+    debug: bool = False,
+    verbose: bool = False,
+) -> Path:
 
     base_args = KompileArgs(
         main_file=main_file,
@@ -51,12 +52,10 @@ def medik_kompile(
 
     match target:
         case KompileTarget.EXECUTION:
-            kompile = LLVMKompile(base_args=base_args,
-                                  enable_llvm_debug=enable_llvm_debug)
-            return kompile(output_dir=output_dir,debug=debug,verbose=verbose)
+            kompile = LLVMKompile(base_args=base_args, enable_llvm_debug=enable_llvm_debug)
+            return kompile(output_dir=output_dir, debug=debug, verbose=verbose)
         case KompileTarget.MODEL_CHECK:
-            kompile = LLVMKompile(base_args=base_args,
-                                  enable_llvm_debug=enable_llvm_debug,
-                                  enable_search=True)
-            return kompile(output_dir=output_dir,debug=debug,verbose=verbose)
-
+            kompile = LLVMKompile(base_args=base_args, enable_llvm_debug=enable_llvm_debug, enable_search=True)
+            return kompile(output_dir=output_dir, debug=debug, verbose=verbose)
+        case _:
+            raise ValueError(f'Unknown target: {target!r}')

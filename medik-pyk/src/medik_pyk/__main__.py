@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import logging
 from argparse import ArgumentParser
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-from pyk.cli.args import LoggingOptions, DefinitionOptions, KCLIArgs
-from collections.abc import Iterable
-from pyk.cli.utils import file_path, dir_path
+from pyk.cli.args import DefinitionOptions, KCLIArgs, LoggingOptions
+from pyk.cli.utils import dir_path, file_path
 from pyk.kdist import kdist
 
 if TYPE_CHECKING:
     from argparse import Namespace
     from pathlib import Path
-    from typing import Final
+    from typing import Any, Dict, Final
 
 _LOGGER: Final = logging.getLogger(__name__)
 _LOG_FORMAT: Final = '%(levelname)s %(asctime)s %(name)s - %(message)s'
@@ -36,6 +36,7 @@ def main() -> None:
     execute = globals()[executor_name]
     execute(options)
 
+
 def _create_argument_parser() -> ArgumentParser:
     parser = ArgumentParser(prog='medik', description='MediK CLI')
 
@@ -49,21 +50,23 @@ def _create_argument_parser() -> ArgumentParser:
 
     return parser
 
+
 def generate_options(args: Dict[str, Any]) -> LoggingOptions:
-    match args['command']:
+    command = args['command']
+    match command:
         case 'run':
             return RunOptions(args)
         case _:
             raise ValueError(f'Unrecognized command: {command}')
+
 
 class RunOptions(LoggingOptions, DefinitionOptions):
     input_file: Path
 
     @staticmethod
     def default() -> dict[str, Any]:
-        return {
-            'definition_dir': None
-        }
+        return {'definition_dir': None}
+
 
 def _loglevel(args: Namespace) -> int:
     if args.debug:
@@ -78,4 +81,3 @@ def _loglevel(args: Namespace) -> int:
 def exec_run(options: RunOptions) -> None:
     use_dir = options.definition_dir or kdist.get('medik-semantics.llvm')
     print('will use dir {}'.format(use_dir))
-
