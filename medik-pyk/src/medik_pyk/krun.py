@@ -27,6 +27,14 @@ class Medik(KRun, KPrint):
             definition_dir = definition_dir,
         )
 
+    def run(self,
+        program_file: Path,
+        depth: int
+            ) -> None :
+
+
+
+
     async def run(self,
         program_file: Path,
         send_queue: Queue,
