@@ -1,21 +1,14 @@
 BUILD_DIR     := .build
 BUILD_LOCAL   := $(abspath $(BUILD_DIR)/local)
 LOCAL_LIB     := $(BUILD_LOCAL)/lib
+K_VERSION     := $(shell cat k-version)
 
 DEPS_DIR         := ext
-K_SUBMODULE      := $(abspath $(DEPS_DIR)/k)
 PLUGIN_SUBMODULE := $(abspath $(DEPS_DIR)/blockchain-k-plugin)
 
-K_RELEASE ?= $(K_SUBMODULE)/k-distribution/target/release/k
-K_BIN     := $(K_RELEASE)/bin
-K_LIB     := $(K_RELEASE)/lib
-export K_RELEASE
-
-PATH := $(K_BIN):$(PATH)
-export PATH
-
 .PHONY: all clean distclean \
-        deps k-deps \
+        deps  \
+	setup-k \
         build \
         tests \
 
@@ -25,18 +18,18 @@ all: build
 # --------------
 
 deps	   : repo-deps
-repo-deps  : k-deps plugin-deps
-k-deps	   : $(K_SUBMODULE)/make.timestamp
+repo-deps  : plugin-deps
 plugin-deps: $(PLUGIN_SUBMODULE)/make.timestamp
-
-$(K_SUBMODULE)/make.timestamp:
-	git submodule update --init --recursive -- $(K_SUBMODULE)
-	cd $(K_SUBMODULE) && mvn package -DskipTests -U -Dproject.build.type=FastBuild
-	touch $(K_SUBMODULE)/make.timestamp
 
 $(PLUGIN_SUBMODULE)/make.timestamp:
 	git submodule update --init --recursive -- $(PLUGIN_SUBMODULE)
 	touch $(PLUGIN_SUBMODULE)/make.timestamp
+
+# Setup K 
+# -------
+
+setup-k:  
+	kup install k --version $(K_VERSION)
 
 # Building
 # --------
@@ -50,7 +43,7 @@ COMMON_FILES  :=
 EXTRA_K_FILES += $(MAIN_DEFN_FILE).md
 ALL_K_FILES   := $(COMMON_FILES) $(EXTRA_K_FILES)
 
-build: build-execution build-model-check build-symbolic
+build: setup-k build-execution build-model-check build-symbolic
 
 COMMON_OPTS := -w all -Wno unused-symbol --gen-glr-bison-parser
 
